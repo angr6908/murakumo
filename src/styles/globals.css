@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+@config '../../tailwind.config.js';
+@source '../**/*.{js,ts,jsx,tsx}';
+
+@layer base {
+  html,
+  body,
+  #__next {
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-gray-50 dark:bg-gray-800;
+  }
+}
+
+@layer utilities {
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+.react-pdf__Page__canvas {
+  margin-left: auto;
+  margin-right: auto;
+  border: 1px solid rgb(212 212 216 / 0.4);
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+}
+.markdown-body ol {
+  list-style-type: decimal;
+}
+pre[class*='language-'],
+code[class*='language-'] {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
+}
+
+*:focus,
+*:focus-visible {
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-color: transparent !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+*:focus-within {
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-color: transparent !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  outline: none !important;
+}
