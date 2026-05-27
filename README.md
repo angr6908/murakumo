@@ -15,7 +15,7 @@ onedrive-vercel-index with the latest dependencies and Vercel Blob (Free).
     ```
 4. Redeploy, open the site, and finish the OAuth flow.
 
-## Environmental Variables
+## Environmental Variables (Optional)
 
 ```dotenv
 CLIENT_SECRET=""
