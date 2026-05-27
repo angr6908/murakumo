@@ -1,31 +1,21 @@
 # OneDrive Vercel Index Plus
 
-OneDrive Vercel Index with the latest dependencies and Vercel Blob.
+onedrive-vercel-index with the latest dependencies and Vercel Blob (Free).
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/angr6908/onedrive-vercel-index-plus&project-name=onedrive-vercel-index-plus&repository-name=onedrive-vercel-index-plus)
 
 ## Vercel deployment
 
 1. Import this repository into Vercel.
-2. Open the Storage tab and connect a Vercel Blob store to this project.
+2. Open the Storage tab and add a Vercel Blob store to this project.
 3. Add the environment variables below.
-4. Deploy, open the site, and finish the OAuth flow.
+   ```dotenv
+    CLIENT_ID="YOUR_CLIENT_ID"
+    OBFUSCATED_CLIENT_SECRET="YOUR_OBFUSCATED_CLIENT_SECRET"
+    ```
+4. Redeploy, open the site, and finish the OAuth flow.
 
-Required:
-
-```dotenv
-CLIENT_ID="YOUR_CLIENT_ID"
-OBFUSCATED_CLIENT_SECRET="YOUR_OBFUSCATED_CLIENT_SECRET"
-```
-
-The default Microsoft OAuth callback URL is `http://localhost:3000`, matching the previous deployment behavior. If your
-Microsoft app registration uses a different callback, set it explicitly:
-
-```dotenv
-REDIRECT_URI="http://localhost:3000"
-```
-
-Optional:
+## Environmental Variables
 
 ```dotenv
 CLIENT_SECRET=""
