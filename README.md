@@ -7,7 +7,7 @@ onedrive-vercel-index with the latest dependencies and Vercel Blob (Free).
 ## Vercel deployment
 
 1. Import this repository into Vercel.
-2. Open the Storage tab and add a Vercel Blob store to this project.
+2. Open the project storage tab and create a Vercel Blob.
 3. Add the environment variables below.
    ```dotenv
     CLIENT_ID="YOUR_CLIENT_ID"
