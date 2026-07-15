@@ -1,8 +1,8 @@
-# OneDrive Vercel Index Plus
+# murakumo
 
-onedrive-vercel-index with the latest dependencies and Vercel Blob (Free).
+onedrive-vercel-index refreshed with Vercel Blob (Free).
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/angr6908/onedrive-vercel-index-plus&project-name=onedrive-vercel-index-plus&repository-name=onedrive-vercel-index-plus)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/angr6908/murakumo&project-name=murakumo&repository-name=murakumo)
 
 ## Vercel deployment
 
@@ -27,7 +27,7 @@ SITE_ICON="/icons/128.png"
 SITE_TITLE="OneDrive"
 BASE_DIRECTORY="/"
 MAX_ITEMS="100"
-SITE_FOOTER='Powered by <a href="https://github.com/angr6908/onedrive-vercel-index-plus" target="_blank" rel="noopener noreferrer">onedrive-vercel-index-plus</a>.'
+SITE_FOOTER='Powered by <a href="https://github.com/angr6908/murakumo" target="_blank" rel="noopener noreferrer">murakumo</a>.'
 PROTECTED_ROUTES="[]"
 SITE_EMAIL=""
 SITE_LINKS="[]"
