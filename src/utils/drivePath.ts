@@ -1,4 +1,4 @@
-import type { ParsedUrlQuery } from 'querystring'
+import type { ParsedUrlQuery } from 'node:querystring'
 
 export function queryToPath(query?: ParsedUrlQuery): string {
   if (!query?.path) return '/'
@@ -11,7 +11,6 @@ export function getItemPath(path: string, name: string): string {
 }
 
 type DriveItemName = { name?: unknown }
-const normaliseName = (name: unknown) =>
-  typeof name === 'string' ? name.normalize('NFKC').trim().toLowerCase() : ''
+const normaliseName = (name: unknown) => (typeof name === 'string' ? name.normalize('NFKC').trim().toLowerCase() : '')
 export const isPersonalVaultItem = (item: DriveItemName) => normaliseName(item.name) === 'personal vault'
 export const isNotPersonalVaultItem = <T extends DriveItemName>(item: T) => !isPersonalVaultItem(item)

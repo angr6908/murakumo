@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react'
-
 import Image from 'next/image'
+import type { ReactNode } from 'react'
 
 export default function OAuthCard({
   imageAlt,
@@ -19,8 +18,8 @@ export default function OAuthCard({
         <div className="mx-auto w-52">
           <Image src={imageSrc} width={912} height={912} alt={imageAlt} priority />
         </div>
-        <h3 className="mb-4 text-center text-xl font-medium">Welcome to your new onedrive-vercel-index-plus 🎉</h3>
-        <h3 className="mt-4 mb-2 text-lg font-medium">{stepTitle}</h3>
+        <h3 className="mb-4 text-center font-medium text-xl">Welcome to your new onedrive-vercel-index-plus 🎉</h3>
+        <h3 className="mt-4 mb-2 font-medium text-lg">{stepTitle}</h3>
         {children}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { readSiteConfig, type PublicRuntimeConfig } from './siteConfig'
+import { type PublicRuntimeConfig, readSiteConfig } from './siteConfig'
 
 export type { PublicRuntimeConfig, PublicSiteLink } from './siteConfig'
 

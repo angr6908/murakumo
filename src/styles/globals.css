@@ -1,6 +1,6 @@
-@import 'tailwindcss';
-@config '../../tailwind.config.js';
-@source '../**/*.{js,ts,jsx,tsx}';
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
+@source "../**/*.{js,ts,jsx,tsx}";
 
 @layer base {
   html,
@@ -41,10 +41,10 @@
 .markdown-body ol {
   list-style-type: decimal;
 }
-pre[class*='language-'],
-code[class*='language-'] {
+pre[class*="language-"],
+code[class*="language-"] {
   font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
 }
 
 *:focus,

@@ -1,8 +1,7 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
 import axios from 'axios'
+import type { NextApiRequest, NextApiResponse } from 'next'
 
 import apiConfig from '../../utils/apiConfig'
-import siteConfig from '../../utils/siteConfig'
 import {
   graphHeaders,
   nextPageToken,
@@ -11,10 +10,11 @@ import {
   sendDriveError,
   verifyProtectedPath,
 } from '../../utils/apiRoute'
+import { isNotPersonalVaultItem } from '../../utils/drivePath'
 import { revealObfuscatedToken } from '../../utils/oAuthHandler'
 import { storeOdAuthTokens } from '../../utils/odAuthTokenStore'
 import { encodePath, runCorsMiddleware } from '../../utils/onedriveApi'
-import { isNotPersonalVaultItem } from '../../utils/drivePath'
+import siteConfig from '../../utils/siteConfig'
 
 const driveItemSelect = 'name,size,id,lastModifiedDateTime,folder,file,video,image'
 const fileItemSelect = `${driveItemSelect},@microsoft.graph.downloadUrl`

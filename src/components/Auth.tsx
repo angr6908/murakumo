@@ -1,8 +1,7 @@
-import { FontAwesomeIcon } from '../utils/fontawesome'
-
 import Image from 'next/image'
 import { useRouter } from 'next/router'
-import { FC, useState } from 'react'
+import { type FC, useState } from 'react'
+import { FontAwesomeIcon } from '../utils/fontawesome'
 
 import { matchProtectedRoute } from '../utils/protectedRouteHandler'
 import useLocalStorage from '../utils/useLocalStorage'
@@ -24,9 +23,9 @@ const Auth: FC<{ redirect: string }> = ({ redirect }) => {
       <div className="mx-auto w-3/4 md:w-5/6">
         <Image src={'/images/fabulous-wapmire-weekdays.png'} alt="authenticate" width={912} height={912} priority />
       </div>
-      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{'Enter Password'}</div>
+      <div className="font-bold text-gray-900 text-lg dark:text-gray-100">{'Enter Password'}</div>
 
-      <p className="text-sm font-medium text-gray-500">
+      <p className="font-medium text-gray-500 text-sm">
         {'This route (the folder itself and the files inside) is password protected. ' +
           'If you know the password, please enter it below.'}
       </p>

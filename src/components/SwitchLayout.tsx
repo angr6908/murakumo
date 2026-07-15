@@ -1,6 +1,6 @@
-import { IconProp } from '@fortawesome/fontawesome-svg-core'
-import { FontAwesomeIcon } from '../utils/fontawesome'
+import type { IconProp } from '@fortawesome/fontawesome-svg-core'
 import { useEffect, useRef, useState } from 'react'
+import { FontAwesomeIcon } from '../utils/fontawesome'
 
 import useLocalStorage from '../utils/useLocalStorage'
 
@@ -39,7 +39,7 @@ const SwitchLayout = () => {
   }
 
   return (
-    <div ref={container} className="relative w-24 flex-shrink-0 text-sm text-gray-600 md:w-28 dark:text-gray-300">
+    <div ref={container} className="relative w-24 flex-shrink-0 text-gray-600 text-sm md:w-28 dark:text-gray-300">
       <button
         type="button"
         className="relative w-full cursor-pointer rounded pl-4"
@@ -72,7 +72,7 @@ const SwitchLayout = () => {
                 aria-selected={selected}
                 className={`${
                   selected ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/10 dark:text-blue-400' : ''
-                } relative flex w-full cursor-pointer items-center py-1.5 pl-3 text-left text-gray-600 select-none hover:opacity-80 dark:text-gray-300`}
+                } relative flex w-full cursor-pointer select-none items-center py-1.5 pl-3 text-left text-gray-600 hover:opacity-80 dark:text-gray-300`}
                 onClick={() => selectLayout(layout)}
               >
                 <FontAwesomeIcon className="mr-2 h-3 w-3" icon={layout.icon} />

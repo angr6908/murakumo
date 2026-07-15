@@ -1,19 +1,23 @@
-import type { OdFileObject, OdFolderObject } from '../types'
-import { ParsedUrlQuery } from 'querystring'
-import { FC, ReactElement, useState } from 'react'
-import { FontAwesomeIcon } from '../utils/fontawesome'
-import toast, { Toaster } from 'react-hot-toast'
-
+import type { ParsedUrlQuery } from 'node:querystring'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
-
-import useLocalStorage from '../utils/useLocalStorage'
-import { getPreviewType, preview } from '../utils/getPreviewType'
+import { type FC, type ReactElement, useState } from 'react'
+import toast, { Toaster } from 'react-hot-toast'
+import type { OdFileObject, OdFolderObject } from '../types'
+import { getItemPath, isNotPersonalVaultItem, queryToPath } from '../utils/drivePath'
 import { useProtectedSWRInfinite } from '../utils/fetchWithSWR'
+import { FontAwesomeIcon } from '../utils/fontawesome'
 import { getExtension } from '../utils/getFileIcon'
-import { getItemPath, queryToPath, isNotPersonalVaultItem } from '../utils/drivePath'
+import { getPreviewType, preview } from '../utils/getPreviewType'
 import { rawFileUrl } from '../utils/odUrls'
 import { getStoredToken } from '../utils/protectedRouteHandler'
+import useLocalStorage from '../utils/useLocalStorage'
+import Auth from './Auth'
+import { isSelectableFile } from './FolderControls'
+import FolderGridLayout from './FolderGridLayout'
+import FolderListLayout from './FolderListLayout'
+import FourOhFour from './FourOhFour'
+import Loading, { LoadingIcon } from './Loading'
 import {
   DownloadingToast,
   downloadMultipleFiles,
@@ -21,16 +25,8 @@ import {
   downloadUrl,
   traverseFolder,
 } from './MultiFileDownloader'
-
-import { layouts } from './SwitchLayout'
-import Loading, { LoadingIcon } from './Loading'
-import FourOhFour from './FourOhFour'
-import Auth from './Auth'
 import { PreviewContainer } from './previews/Containers'
-
-import FolderListLayout from './FolderListLayout'
-import FolderGridLayout from './FolderGridLayout'
-import { isSelectableFile } from './FolderControls'
+import { layouts } from './SwitchLayout'
 
 const PreviewLoading = () => (
   <PreviewContainer>
@@ -247,13 +243,13 @@ const FileListing: FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
 
         {!onlyOnePage && (
           <div className="rounded-b bg-white dark:bg-gray-900 dark:text-gray-100">
-            <div className="border-b border-gray-200 p-3 text-center font-mono text-sm text-gray-400 dark:border-gray-700">
+            <div className="border-gray-200 border-b p-3 text-center font-mono text-gray-400 text-sm dark:border-gray-700">
               {`- showing ${size} page(s) ` +
                 (isLoadingMore ? `of ... file(s) -` : `of ${folderChildren.length} file(s) -`)}
             </div>
             <button
               className={`flex w-full items-center justify-center space-x-2 p-3 disabled:cursor-not-allowed ${
-                isLoadingMore || isReachingEnd ? 'opacity-60' : 'dark:hover:bg-gray-850 hover:bg-gray-100'
+                isLoadingMore || isReachingEnd ? 'opacity-60' : 'hover:bg-gray-100 dark:hover:bg-gray-850'
               }`}
               onClick={() => setSize(size + 1)}
               disabled={isLoadingMore || isReachingEnd}

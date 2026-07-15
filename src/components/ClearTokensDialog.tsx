@@ -44,11 +44,11 @@ export default function ClearTokensDialog({
             leaveTo="opacity-0 scale-95"
           >
             <div className="my-8 inline-block w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle transition-all dark:bg-gray-900">
-              <Dialog.Title className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              <Dialog.Title className="font-bold text-gray-900 text-lg dark:text-gray-100">
                 {'Clear all tokens?'}
               </Dialog.Title>
               <div className="mt-2">
-                <p className="text-sm text-gray-500">
+                <p className="text-gray-500 text-sm">
                   {'These tokens are used to authenticate yourself into password protected folders, ' +
                     'clearing them means that you will need to re-enter the passwords again.'}
                 </p>

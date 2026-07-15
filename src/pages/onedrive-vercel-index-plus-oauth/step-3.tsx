@@ -1,13 +1,12 @@
-import { GetServerSideProps } from 'next'
+import type { GetServerSideProps } from 'next'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
-import { FontAwesomeIcon } from '../../utils/fontawesome'
+import { LoadingIcon } from '../../components/Loading'
 
 import OAuthCard from '../../components/OAuthCard'
 import PageLayout from '../../components/PageLayout'
-
+import { FontAwesomeIcon } from '../../utils/fontawesome'
 import { requestTokenWithAuthCode, sendTokenToServer } from '../../utils/oAuthHandler'
-import { LoadingIcon } from '../../components/Loading'
 import { getServerSidePublicConfigProps, type PublicRuntimeConfig } from '../../utils/publicRuntimeConfig'
 
 type StoreTokenStatus = 'idle' | 'loading' | 'stored' | 'error'
@@ -112,7 +111,7 @@ export default function OAuthStep3({
               <FontAwesomeIcon icon="exclamation-circle" className="mr-2" />
               <span>{`Whoops, looks like we got a problem: ${error}.`}</span>
             </p>
-            <p className="my-2 rounded border border-gray-400/20 bg-gray-50 p-2 font-mono text-sm whitespace-pre-line opacity-80 dark:bg-gray-800">
+            <p className="my-2 whitespace-pre-line rounded border border-gray-400/20 bg-gray-50 p-2 font-mono text-sm opacity-80 dark:bg-gray-800">
               {description}
             </p>
             {errorUri && (
@@ -132,7 +131,7 @@ export default function OAuthStep3({
             )}
             <div className="mt-6 mb-2 text-right">
               <button
-                className="rounded-lg bg-gradient-to-br from-red-500 to-orange-400 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-gradient-to-bl disabled:cursor-not-allowed disabled:grayscale"
+                className="rounded-lg bg-gradient-to-br from-red-500 to-orange-400 px-4 py-2.5 text-center font-medium text-sm text-white hover:bg-gradient-to-bl disabled:cursor-not-allowed disabled:grayscale"
                 onClick={() => {
                   router.push('/onedrive-vercel-index-plus-oauth/step-1')
                 }}
@@ -165,7 +164,7 @@ export default function OAuthStep3({
               )}
             </ol>
 
-            <p className="py-1 text-sm font-medium text-teal-500">
+            <p className="py-1 font-medium text-sm text-teal-500">
               <FontAwesomeIcon icon="exclamation-circle" className="mr-1" /> These tokens may take a few seconds to
               populate after you click the button below. If you go back home and still see the welcome page telling you
               to re-authenticate, revisit home and do a hard refresh.
@@ -177,7 +176,7 @@ export default function OAuthStep3({
 
             <div className="mt-6 mb-2 text-right">
               <button
-                className={`rounded-lg bg-gradient-to-br px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-gradient-to-bl ${
+                className={`rounded-lg bg-gradient-to-br px-4 py-2.5 text-center font-medium text-sm text-white hover:bg-gradient-to-bl ${
                   storeTokenStatus === 'error' ? 'from-red-500 to-orange-400' : 'from-green-500 to-teal-300'
                 }`}
                 onClick={sendAuthTokensToServer}

@@ -1,8 +1,7 @@
-import { NextRouter } from 'next/router'
+import type { NextRouter } from 'next/router'
 import toast from 'react-hot-toast'
-
-import { fetcher } from '../utils/fetchWithSWR'
 import { getItemPath } from '../utils/drivePath'
+import { fetcher } from '../utils/fetchWithSWR'
 import { getStoredToken } from '../utils/protectedRouteHandler'
 
 export function DownloadingToast({ router, progress }: { router: NextRouter; progress?: string }) {
@@ -40,7 +39,7 @@ export function downloadBlob({ blob, name }: { blob: Blob; name: string }) {
   window.URL.revokeObjectURL(bUrl)
 }
 
-const zipName = (folder?: string) => (folder ? folder + '.zip' : 'download.zip')
+const zipName = (folder?: string) => (folder ? `${folder}.zip` : 'download.zip')
 const updateProgress = (toastId: string, router: NextRouter) => (metadata: { percent: number }) => {
   toast.loading(<DownloadingToast router={router} progress={metadata.percent.toFixed(0)} />, { id: toastId })
 }
@@ -105,7 +104,10 @@ export async function downloadTreelikeMultipleFiles({
     if (isFolder) {
       map.push({ path, dir: dir.folder(name)! })
     } else {
-      dir.file(name, fetch(url!).then(r => r.blob()))
+      dir.file(
+        name,
+        fetch(url!).then(r => r.blob()),
+      )
     }
   }
 
@@ -149,7 +151,12 @@ export async function* traverseFolder(path: string): AsyncGenerator<TraverseItem
       const { i, path, error: innerError } = error
       if (Math.floor(innerError.status / 100) === 4) {
         delete pool[i]
-        yield { path, meta: {}, isFolder: true, error: { status: innerError.status, message: innerError.message.error } }
+        yield {
+          path,
+          meta: {},
+          isFolder: true,
+          error: { status: innerError.status, message: innerError.message.error },
+        }
         continue
       } else {
         throw error
@@ -157,7 +164,7 @@ export async function* traverseFolder(path: string): AsyncGenerator<TraverseItem
     }
 
     const { i, path, data } = info
-    if (!data || !data.folder) throw new Error('Path is not folder')
+    if (!data?.folder) throw new Error('Path is not folder')
     delete pool[i]
 
     const items = data.folder.value.map((c: any) => ({

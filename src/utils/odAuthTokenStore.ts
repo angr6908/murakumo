@@ -7,9 +7,10 @@ type StoredTokens = {
 }
 
 const tokenBlobPath = process.env.AUTH_TOKEN_BLOB_PATH || 'onedrive-auth-tokens.json'
-const blobAuthOptions = process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN
-  ? { storeId: process.env.BLOB_STORE_ID, oidcToken: process.env.VERCEL_OIDC_TOKEN }
-  : {}
+const blobAuthOptions =
+  process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN
+    ? { storeId: process.env.BLOB_STORE_ID, oidcToken: process.env.VERCEL_OIDC_TOKEN }
+    : {}
 
 function parseStoredTokens(content: string, source: string): StoredTokens {
   try {
@@ -52,8 +53,14 @@ export async function getOdAuthTokens(): Promise<{ accessToken: unknown; refresh
   return { accessToken, refreshToken: tokens.refreshToken ?? null }
 }
 
-export async function storeOdAuthTokens({ accessToken, accessTokenExpiry, refreshToken }: {
-  accessToken: string; accessTokenExpiry: number; refreshToken: string
+export async function storeOdAuthTokens({
+  accessToken,
+  accessTokenExpiry,
+  refreshToken,
+}: {
+  accessToken: string
+  accessTokenExpiry: number
+  refreshToken: string
 }): Promise<void> {
   await writeTokens({
     accessToken,

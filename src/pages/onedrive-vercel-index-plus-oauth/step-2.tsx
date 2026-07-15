@@ -1,13 +1,13 @@
-import { GetServerSideProps } from 'next'
+import type { GetServerSideProps } from 'next'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
-import { FontAwesomeIcon } from '../../utils/fontawesome'
+import { LoadingIcon } from '../../components/Loading'
 
 import OAuthCard from '../../components/OAuthCard'
 import PageLayout from '../../components/PageLayout'
-import { LoadingIcon } from '../../components/Loading'
 import apiConfig from '../../utils/apiConfig'
+import { FontAwesomeIcon } from '../../utils/fontawesome'
 import { extractAuthCodeFromRedirected, generateAuthorisationUrl } from '../../utils/oAuthHandler'
 import { getServerSidePublicConfigProps, type PublicRuntimeConfig } from '../../utils/publicRuntimeConfig'
 
@@ -40,7 +40,7 @@ export default function OAuthStep2({
         imageAlt="fabulous come back later"
         stepTitle="Step 2/3: Get authorisation code"
       >
-        <p className="py-1 text-sm font-medium text-red-400">
+        <p className="py-1 font-medium text-red-400 text-sm">
           <FontAwesomeIcon icon="exclamation-circle" className="mr-1" /> If you are not the owner of this website, stop
           now, as continuing with this process may expose your personal files in OneDrive.
         </p>
@@ -54,7 +54,7 @@ export default function OAuthStep2({
           <div className="absolute top-0 right-0 p-1 opacity-60">
             <FontAwesomeIcon icon="external-link-alt" />
           </div>
-          <pre className="overflow-x-auto p-2 whitespace-pre-wrap">
+          <pre className="overflow-x-auto whitespace-pre-wrap p-2">
             <code>{oAuthUrl}</code>
           </pre>
         </div>
@@ -73,7 +73,7 @@ export default function OAuthStep2({
         </div>
 
         <input
-          className={`my-2 w-full flex-1 rounded border bg-gray-50 p-2 font-mono text-sm font-medium dark:bg-gray-800 dark:text-white ${
+          className={`my-2 w-full flex-1 rounded border bg-gray-50 p-2 font-medium font-mono text-sm dark:bg-gray-800 dark:text-white ${
             authCode ? 'border-green-500/50' : 'border-red-500/50'
           }`}
           type="text"
@@ -86,7 +86,7 @@ export default function OAuthStep2({
         />
 
         <p className="py-1">The authorisation code extracted is:</p>
-        <p className="my-2 truncate overflow-hidden rounded border border-gray-400/20 bg-gray-50 p-2 font-mono text-sm opacity-80 dark:bg-gray-800">
+        <p className="my-2 overflow-hidden truncate rounded border border-gray-400/20 bg-gray-50 p-2 font-mono text-sm opacity-80 dark:bg-gray-800">
           {authCode ?? <span className="animate-pulse">Waiting for code...</span>}
         </p>
 
@@ -98,7 +98,7 @@ export default function OAuthStep2({
 
         <div className="mt-6 mb-2 text-right">
           <button
-            className="rounded-lg bg-gradient-to-br from-green-500 to-cyan-400 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-gradient-to-bl disabled:cursor-not-allowed disabled:grayscale"
+            className="rounded-lg bg-gradient-to-br from-green-500 to-cyan-400 px-4 py-2.5 text-center font-medium text-sm text-white hover:bg-gradient-to-bl disabled:cursor-not-allowed disabled:grayscale"
             disabled={authCode === ''}
             onClick={() => {
               setButtonLoading(true)

@@ -1,8 +1,7 @@
-import type { OdThumbnail } from '../../types'
-
 import axios from 'axios'
 import type { NextApiRequest, NextApiResponse } from 'next'
-
+import type { OdThumbnail } from '../../types'
+import apiConfig from '../../utils/apiConfig'
 import {
   graphHeaders,
   normalisePathQuery,
@@ -11,7 +10,6 @@ import {
   verifyProtectedPath,
 } from '../../utils/apiRoute'
 import { encodePath } from '../../utils/onedriveApi'
-import apiConfig from '../../utils/apiConfig'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const accessToken = await requireAccessToken(res)

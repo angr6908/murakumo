@@ -9,7 +9,13 @@ export function getStoredToken(path: string): string | null {
   return storedToken ? encryptToken(storedToken) : null
 }
 
-export function compareHashedToken({ odTokenHeader, dotPassword }: { odTokenHeader: string; dotPassword: string }): boolean {
+export function compareHashedToken({
+  odTokenHeader,
+  dotPassword,
+}: {
+  odTokenHeader: string
+  dotPassword: string
+}): boolean {
   return encryptToken(dotPassword.trim()) === odTokenHeader
 }
 

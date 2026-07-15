@@ -1,4 +1,4 @@
-import { GetServerSideProps } from 'next'
+import type { GetServerSideProps } from 'next'
 
 import DrivePage from '../components/DrivePage'
 import { getServerSidePublicConfigProps, type PublicRuntimeConfig } from '../utils/publicRuntimeConfig'

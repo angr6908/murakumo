@@ -1,11 +1,10 @@
-import { MouseEventHandler, useState } from 'react'
-import { FontAwesomeIcon } from '../utils/fontawesome'
-import { IconProp } from '@fortawesome/fontawesome-svg-core'
-import toast from 'react-hot-toast'
-import { useClipboard } from 'use-clipboard-copy'
-
+import type { IconProp } from '@fortawesome/fontawesome-svg-core'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
+import { type MouseEventHandler, useState } from 'react'
+import toast from 'react-hot-toast'
+import { useClipboard } from 'use-clipboard-copy'
+import { FontAwesomeIcon } from '../utils/fontawesome'
 
 import { getBaseUrl } from '../utils/getBaseUrl'
 import { rawFileUrl } from '../utils/odUrls'
@@ -43,7 +42,7 @@ export const DownloadButton = ({
 }) => {
   return (
     <button
-      className={`flex items-center space-x-2 rounded-lg border bg-white px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100/10 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-900 ${btnStyleMap(
+      className={`flex items-center space-x-2 rounded-lg border bg-white px-4 py-2 font-medium text-gray-900 text-sm hover:bg-gray-100/10 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-900 ${btnStyleMap(
         btnColor,
       )}`}
       title={btnTitle}

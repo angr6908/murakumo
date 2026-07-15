@@ -1,11 +1,10 @@
-import { FontAwesomeIcon } from '../utils/fontawesome'
-import toast, { Toaster } from 'react-hot-toast'
-
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useState } from 'react'
+import toast, { Toaster } from 'react-hot-toast'
+import { FontAwesomeIcon } from '../utils/fontawesome'
 
 import { getPublicRuntimeConfig } from '../utils/publicRuntimeConfig'
 
@@ -49,12 +48,14 @@ const Navbar = () => {
   }, [openSearchBox, os])
 
   useEffect(() => {
-    setTokenPresent(protectedRoutes.some(r => localStorage.hasOwnProperty(r)))
+    setTokenPresent(protectedRoutes.some(r => Object.hasOwn(localStorage, r)))
   }, [protectedRoutes])
 
   const clearTokens = () => {
     setIsOpen(false)
-    protectedRoutes.forEach(r => localStorage.removeItem(r))
+    protectedRoutes.forEach(r => {
+      localStorage.removeItem(r)
+    })
     toast.success('Cleared all tokens')
     setTimeout(() => {
       router.reload()
@@ -62,7 +63,7 @@ const Navbar = () => {
   }
 
   return (
-    <div className="bg-opacity-80 sticky top-0 z-[100] border-b border-gray-900/10 bg-white backdrop-blur-md dark:border-gray-500/30 dark:bg-gray-900">
+    <div className="sticky top-0 z-[100] border-gray-900/10 border-b bg-white bg-opacity-80 backdrop-blur-md dark:border-gray-500/30 dark:bg-gray-900">
       <Toaster />
 
       {searchMounted && <SearchModal searchOpen={searchOpen} setSearchOpen={setSearchOpen} />}
@@ -80,14 +81,14 @@ const Navbar = () => {
           >
             <div className="flex items-center space-x-2">
               <FontAwesomeIcon className="h-4 w-4" icon="search" />
-              <span className="truncate text-sm font-medium">{'Search ...'}</span>
+              <span className="truncate font-medium text-sm">{'Search ...'}</span>
             </div>
 
             <div className="hidden items-center space-x-1 md:flex">
-              <div className="rounded-lg bg-gray-200 px-2 py-1 text-xs font-medium dark:bg-gray-700">
+              <div className="rounded-lg bg-gray-200 px-2 py-1 font-medium text-xs dark:bg-gray-700">
                 {os === 'mac' ? '⌘' : 'Ctrl'}
               </div>
-              <div className="rounded-lg bg-gray-200 px-2 py-1 text-xs font-medium dark:bg-gray-700">K</div>
+              <div className="rounded-lg bg-gray-200 px-2 py-1 font-medium text-xs dark:bg-gray-700">K</div>
             </div>
           </button>
 
@@ -101,16 +102,14 @@ const Navbar = () => {
                 className="flex items-center space-x-2 hover:opacity-80 dark:text-white"
               >
                 <BrandIcon name={l.name} />
-                <span className="hidden text-sm font-medium md:inline-block">
-                  {l.name}
-                </span>
+                <span className="hidden font-medium text-sm md:inline-block">{l.name}</span>
               </a>
             ))}
 
           {siteConfig.email && (
             <a href={siteConfig.email} className="flex items-center space-x-2 hover:opacity-80 dark:text-white">
               <FontAwesomeIcon icon={['far', 'envelope']} />
-              <span className="hidden text-sm font-medium md:inline-block">{'Email'}</span>
+              <span className="hidden font-medium text-sm md:inline-block">{'Email'}</span>
             </a>
           )}
 
@@ -122,7 +121,7 @@ const Navbar = () => {
                 setIsOpen(true)
               }}
             >
-              <span className="hidden text-sm font-medium md:inline-block">{'Logout'}</span>
+              <span className="hidden font-medium text-sm md:inline-block">{'Logout'}</span>
               <FontAwesomeIcon icon="sign-out-alt" />
             </button>
           )}

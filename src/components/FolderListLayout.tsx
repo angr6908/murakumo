@@ -1,21 +1,18 @@
-import type { OdFolderChildren } from '../types'
-
 import Link from 'next/link'
-import { FC } from 'react'
-
-import { humanFileSize, formatModifiedDateTime } from '../utils/fileDetails'
+import type { FC } from 'react'
+import type { OdFolderChildren } from '../types'
 import { getItemPath } from '../utils/drivePath'
-
+import { formatModifiedDateTime, humanFileSize } from '../utils/fileDetails'
+import { getStoredToken } from '../utils/protectedRouteHandler'
 import {
   Checkbox,
   ChildIcon,
   ChildName,
   FolderChildActions,
-  FolderLayoutProps,
+  type FolderLayoutProps,
   isSelectableFile,
   SelectedFilesControls,
 } from './FolderControls'
-import { getStoredToken } from '../utils/protectedRouteHandler'
 
 const FileListItem: FC<{ fileContent: OdFolderChildren }> = ({ fileContent: c }) => {
   return (
@@ -26,10 +23,10 @@ const FileListItem: FC<{ fileContent: OdFolderChildren }> = ({ fileContent: c })
         </div>
         <ChildName name={c.name} folder={Boolean(c.folder)} />
       </div>
-      <div className="col-span-3 hidden flex-shrink-0 font-mono text-sm text-gray-700 md:block dark:text-gray-500">
+      <div className="col-span-3 hidden flex-shrink-0 font-mono text-gray-700 text-sm md:block dark:text-gray-500">
         {formatModifiedDateTime(c.lastModifiedDateTime)}
       </div>
-      <div className="col-span-1 hidden flex-shrink-0 truncate font-mono text-sm text-gray-700 md:block dark:text-gray-500">
+      <div className="col-span-1 hidden flex-shrink-0 truncate font-mono text-gray-700 text-sm md:block dark:text-gray-500">
         {humanFileSize(c.size)}
       </div>
     </div>
@@ -54,20 +51,20 @@ const FolderListLayout = ({
 
   return (
     <div className="rounded bg-white shadow-sm dark:bg-gray-900 dark:text-gray-100">
-      <div className="grid grid-cols-12 items-center space-x-2 border-b border-gray-900/10 px-3 dark:border-gray-500/30">
-        <div className="col-span-12 py-2 text-xs font-bold tracking-widest text-gray-600 uppercase md:col-span-6 dark:text-gray-300">
+      <div className="grid grid-cols-12 items-center space-x-2 border-gray-900/10 border-b px-3 dark:border-gray-500/30">
+        <div className="col-span-12 py-2 font-bold text-gray-600 text-xs uppercase tracking-widest md:col-span-6 dark:text-gray-300">
           {'Name'}
         </div>
-        <div className="col-span-3 hidden text-xs font-bold tracking-widest text-gray-600 uppercase md:block dark:text-gray-300">
+        <div className="col-span-3 hidden font-bold text-gray-600 text-xs uppercase tracking-widest md:block dark:text-gray-300">
           {'Last Modified'}
         </div>
-        <div className="hidden text-xs font-bold tracking-widest text-gray-600 uppercase md:block dark:text-gray-300">
+        <div className="hidden font-bold text-gray-600 text-xs uppercase tracking-widest md:block dark:text-gray-300">
           {'Size'}
         </div>
-        <div className="hidden text-xs font-bold tracking-widest text-gray-600 uppercase md:block dark:text-gray-300">
+        <div className="hidden font-bold text-gray-600 text-xs uppercase tracking-widest md:block dark:text-gray-300">
           {'Actions'}
         </div>
-        <div className="hidden text-xs font-bold tracking-widest text-gray-600 uppercase md:block dark:text-gray-300">
+        <div className="hidden font-bold text-gray-600 text-xs uppercase tracking-widest md:block dark:text-gray-300">
           <SelectedFilesControls
             className="hidden p-1.5 text-gray-700 md:flex dark:text-gray-400"
             selectTitle={'Select files'}
@@ -86,7 +83,7 @@ const FolderListLayout = ({
 
         return (
           <div
-            className="dark:hover:bg-gray-850 grid grid-cols-12 transition-all duration-100 hover:bg-gray-100"
+            className="grid grid-cols-12 transition-all duration-100 hover:bg-gray-100 dark:hover:bg-gray-850"
             key={c.id}
           >
             <Link href={itemPath} passHref prefetch={false} className="col-span-12 md:col-span-10">

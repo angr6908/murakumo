@@ -1,14 +1,13 @@
-import { posix as pathPosix } from 'path'
-
-import type { NextApiRequest, NextApiResponse } from 'next'
+import { posix as pathPosix } from 'node:path'
 import axios from 'axios'
 import Cors from 'cors'
+import type { NextApiRequest, NextApiResponse } from 'next'
 
 import apiConfig from './apiConfig'
-import siteConfig from './siteConfig'
 import { getClientSecret } from './oAuthHandler'
 import { getOdAuthTokens, storeOdAuthTokens } from './odAuthTokenStore'
 import { compareHashedToken } from './protectedRouteHandler'
+import siteConfig from './siteConfig'
 
 const basePath = pathPosix.resolve('/', siteConfig.baseDirectory)
 const clientSecret = getClientSecret()
@@ -36,7 +35,11 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
 
   if ('access_token' in resp.data && 'refresh_token' in resp.data) {
     const { expires_in, access_token, refresh_token } = resp.data
-    await storeOdAuthTokens({ accessToken: access_token, accessTokenExpiry: parseInt(expires_in), refreshToken: refresh_token })
+    await storeOdAuthTokens({
+      accessToken: access_token,
+      accessTokenExpiry: parseInt(expires_in, 10),
+      refreshToken: refresh_token,
+    })
     console.log('Fetch new access token with stored refresh token.')
     return access_token
   }
@@ -68,7 +71,10 @@ export async function getAccessToken(): Promise<string> {
     return await refreshAccessTokenPromise
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error('[onedriveApi] Failed to refresh access token.', { status: error.response?.status, message: error.message })
+      console.error('[onedriveApi] Failed to refresh access token.', {
+        status: error.response?.status,
+        message: error.message,
+      })
     } else {
       console.error('[onedriveApi] Failed to refresh access token.', error)
     }

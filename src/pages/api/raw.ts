@@ -1,6 +1,6 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-import type { OutgoingHttpHeaders } from 'http'
+import type { OutgoingHttpHeaders } from 'node:http'
 import axios from 'axios'
+import type { NextApiRequest, NextApiResponse } from 'next'
 
 import apiConfig from '../../utils/apiConfig'
 import {
@@ -13,7 +13,10 @@ import {
 import { encodePath, runCorsMiddleware } from '../../utils/onedriveApi'
 
 const shouldProxyFile = (proxy: NextApiRequest['query'][string]) => proxy === 'true' || proxy === '1'
-const toOutgoingHeaders = (headers: Record<string, unknown>, cacheControl: ReturnType<NextApiResponse['getHeader']>): OutgoingHttpHeaders => ({
+const toOutgoingHeaders = (
+  headers: Record<string, unknown>,
+  cacheControl: ReturnType<NextApiResponse['getHeader']>,
+): OutgoingHttpHeaders => ({
   ...Object.fromEntries(
     Object.entries(headers).filter(([, v]) => typeof v === 'number' || typeof v === 'string' || Array.isArray(v)),
   ),

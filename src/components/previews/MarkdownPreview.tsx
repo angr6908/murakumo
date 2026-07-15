@@ -1,18 +1,18 @@
-import { FC } from 'react'
+import dynamic from 'next/dynamic'
+import type { FC } from 'react'
 import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
-import dynamic from 'next/dynamic'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 
 import 'katex/dist/katex.min.css'
 
 import useFileContent from '../../utils/fetchOnMount'
 import { rawFileUrl } from '../../utils/odUrls'
+import DownloadButtonGroup from '../DownloadBtnGtoup'
 import FourOhFour from '../FourOhFour'
 import Loading from '../Loading'
-import DownloadButtonGroup from '../DownloadBtnGtoup'
 import { DownloadBtnContainer, PreviewContainer } from './Containers'
 
 const SyntaxHighlighter = dynamic(() => import('./SyntaxHighlighter'), { ssr: false })
@@ -100,12 +100,7 @@ const MarkdownPreview: FC<{
         <div className="markdown-body">
           {/* Using rehypeRaw to render HTML inside Markdown is potentially dangerous, use under safe environments. (#18) */}
           <ReactMarkdown
-            // @ts-ignore
             remarkPlugins={[remarkGfm, remarkMath]}
-            // The type error is introduced by caniuse-lite upgrade.
-            // Since type errors occur often in remark toolchain and the use is so common,
-            // ignoring it shoudld be safe enough.
-            // @ts-ignore
             rehypePlugins={[rehypeKatex, rehypeRaw]}
             components={customRenderer}
           >

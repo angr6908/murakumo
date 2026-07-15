@@ -1,11 +1,10 @@
-import { FC } from 'react'
 import { useRouter } from 'next/router'
-
-import FourOhFour from '../FourOhFour'
-import Loading from '../Loading'
-import DownloadButtonGroup from '../DownloadBtnGtoup'
+import type { FC } from 'react'
 import useFileContent from '../../utils/fetchOnMount'
 import { rawFileUrl } from '../../utils/odUrls'
+import DownloadButtonGroup from '../DownloadBtnGtoup'
+import FourOhFour from '../FourOhFour'
+import Loading from '../Loading'
 import { DownloadBtnContainer, PreviewContainer } from './Containers'
 
 const TextPreview: FC<{ file: any }> = () => {

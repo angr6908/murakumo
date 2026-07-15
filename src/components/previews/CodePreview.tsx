@@ -1,14 +1,14 @@
-import { FC } from 'react'
-import useSystemTheme from 'react-use-system-theme'
-import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
+import { useRouter } from 'next/router'
+import type { FC } from 'react'
+import useSystemTheme from 'react-use-system-theme'
 
 import useFileContent from '../../utils/fetchOnMount'
 import { getLanguageByFileName } from '../../utils/getPreviewType'
 import { rawFileUrl } from '../../utils/odUrls'
+import DownloadButtonGroup from '../DownloadBtnGtoup'
 import FourOhFour from '../FourOhFour'
 import Loading from '../Loading'
-import DownloadButtonGroup from '../DownloadBtnGtoup'
 import { DownloadBtnContainer, PreviewContainer } from './Containers'
 
 const SyntaxHighlighter = dynamic(() => import('./SyntaxHighlighter'), { ssr: false })

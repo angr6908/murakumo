@@ -1,22 +1,20 @@
-import type { OdFolderChildren } from '../types'
-
 import Link from 'next/link'
 import { useState } from 'react'
-
-import { getBaseUrl } from '../utils/getBaseUrl'
-import { formatModifiedDateTime } from '../utils/fileDetails'
+import type { OdFolderChildren } from '../types'
 import { getItemPath } from '../utils/drivePath'
+import { formatModifiedDateTime } from '../utils/fileDetails'
+import { getBaseUrl } from '../utils/getBaseUrl'
 import { thumbnailUrl } from '../utils/odUrls'
+import { getStoredToken } from '../utils/protectedRouteHandler'
 import {
   Checkbox,
   ChildIcon,
   ChildName,
   FolderChildActions,
-  FolderLayoutProps,
+  type FolderLayoutProps,
   isSelectableFile,
   SelectedFilesControls,
 } from './FolderControls'
-import { getStoredToken } from '../utils/protectedRouteHandler'
 
 const GridItem = ({ c, path }: { c: OdFolderChildren; path: string }) => {
   // We use the generated medium thumbnail for rendering preview images (excluding folders)
@@ -55,7 +53,7 @@ const GridItem = ({ c, path }: { c: OdFolderChildren; path: string }) => {
         </span>
         <ChildName name={c.name} folder={Boolean(c.folder)} />
       </div>
-      <div className="truncate text-center font-mono text-xs text-gray-700 dark:text-gray-500">
+      <div className="truncate text-center font-mono text-gray-700 text-xs dark:text-gray-500">
         {formatModifiedDateTime(c.lastModifiedDateTime)}
       </div>
     </div>
@@ -82,7 +80,7 @@ const FolderGridLayout = ({
 
   return (
     <div className="rounded bg-white shadow-sm dark:bg-gray-900 dark:text-gray-100">
-      <div className="flex items-center border-b border-gray-900/10 px-3 text-xs font-bold tracking-widest text-gray-600 uppercase dark:border-gray-500/30 dark:text-gray-400">
+      <div className="flex items-center border-gray-900/10 border-b px-3 font-bold text-gray-600 text-xs uppercase tracking-widest dark:border-gray-500/30 dark:text-gray-400">
         <div className="flex-1">{`${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}</div>
         <SelectedFilesControls
           className="flex p-1.5 text-gray-700 dark:text-gray-400"
@@ -102,7 +100,7 @@ const FolderGridLayout = ({
           return (
             <div
               key={c.id}
-              className="group dark:hover:bg-gray-850 relative overflow-hidden rounded transition-all duration-100 hover:bg-gray-100"
+              className="group relative overflow-hidden rounded transition-all duration-100 hover:bg-gray-100 dark:hover:bg-gray-850"
             >
               <div className="absolute top-0 right-0 z-10 m-1 rounded bg-white/50 py-0.5 opacity-0 transition-all duration-100 group-hover:opacity-100 dark:bg-gray-900/50">
                 <FolderChildActions

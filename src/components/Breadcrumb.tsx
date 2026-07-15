@@ -1,5 +1,4 @@
-import type { ParsedUrlQuery } from 'querystring'
-
+import type { ParsedUrlQuery } from 'node:querystring'
 import Link from 'next/link'
 import { FontAwesomeIcon } from '../utils/fontawesome'
 
@@ -18,7 +17,7 @@ const Breadcrumb: React.FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
   if (Array.isArray(path)) {
     // Render in reverse so the browser scrolls to the end of the breadcrumb.
     return (
-      <ol className="no-scrollbar inline-flex flex-row-reverse items-center gap-1 overflow-x-scroll text-sm text-gray-600 md:gap-3 dark:text-gray-300">
+      <ol className="no-scrollbar inline-flex flex-row-reverse items-center gap-1 overflow-x-scroll text-gray-600 text-sm md:gap-3 dark:text-gray-300">
         {path
           .slice()
           .reverse()
@@ -47,7 +46,7 @@ const Breadcrumb: React.FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
   }
 
   return (
-    <div className="text-sm text-gray-600 transition-all duration-75 hover:opacity-80 dark:text-gray-300">
+    <div className="text-gray-600 text-sm transition-all duration-75 hover:opacity-80 dark:text-gray-300">
       <HomeCrumb />
     </div>
   )

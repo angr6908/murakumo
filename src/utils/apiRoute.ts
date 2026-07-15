@@ -1,5 +1,4 @@
-import { posix as pathPosix } from 'path'
-
+import { posix as pathPosix } from 'node:path'
 import type { NextApiResponse } from 'next'
 
 import { checkAuthRoute, getAccessToken } from './onedriveApi'

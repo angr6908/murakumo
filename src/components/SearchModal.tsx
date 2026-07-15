@@ -1,23 +1,21 @@
-import axios from 'axios'
-import useSWR from 'swr'
-import { Fragment, useRef, useState } from 'react'
-import AwesomeDebouncePromise from 'awesome-debounce-promise'
-import { useAsync } from 'react-async-hook'
-import useConstant from 'use-constant'
-
-import Link from 'next/link'
-import { FontAwesomeIcon } from '../utils/fontawesome'
 import { Dialog, Transition } from '@headlessui/react'
-
+import AwesomeDebouncePromise from 'awesome-debounce-promise'
+import axios from 'axios'
+import Link from 'next/link'
 import type { Dispatch, SetStateAction } from 'react'
+import { Fragment, useRef, useState } from 'react'
+import { useAsync } from 'react-async-hook'
 import type { SWRResponse } from 'swr'
+import useSWR from 'swr'
+import useConstant from 'use-constant'
 import type { OdDriveItem, OdSearchResult } from '../types'
-import { LoadingIcon } from './Loading'
+import { fetcher } from '../utils/fetchWithSWR'
+import { FontAwesomeIcon } from '../utils/fontawesome'
 
 import { getFileIcon } from '../utils/getFileIcon'
-import { fetcher } from '../utils/fetchWithSWR'
 import { getPublicRuntimeConfig } from '../utils/publicRuntimeConfig'
 import HiddenFocusGuard from './HiddenFocusGuard'
+import { LoadingIcon } from './Loading'
 
 type SearchItem = OdSearchResult[number]
 type SearchState = ReturnType<typeof useDriveItemSearch>['results']
@@ -77,7 +75,7 @@ function SearchResultRow({
     <>
       <FontAwesomeIcon className="h-4 w-4 flex-none" icon={item.file ? getFileIcon(item.name) : ['far', 'folder']} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm leading-8 font-medium">{item.name}</div>
+        <div className="truncate font-medium text-sm leading-8">{item.name}</div>
         <div
           className={`truncate font-mono text-xs opacity-60 ${description === 'Loading ...' ? 'animate-pulse' : ''}`}
         >
@@ -147,7 +145,7 @@ function SearchResults({ query, results, onSelect }: { query: string; results: S
 
   if (results.loading) {
     return (
-      <div className="px-4 py-12 text-center text-sm font-medium">
+      <div className="px-4 py-12 text-center font-medium text-sm">
         <LoadingIcon className="svg-inline--fa mr-2 inline-block h-4 w-4 animate-spin" />
         <span>{'Loading ...'}</span>
       </div>
@@ -156,14 +154,14 @@ function SearchResults({ query, results, onSelect }: { query: string; results: S
 
   if (results.error) {
     return (
-      <div className="px-4 py-12 text-center text-sm font-medium">
+      <div className="px-4 py-12 text-center font-medium text-sm">
         {`Error: ${results.error.message ?? 'Search failed.'}`}
       </div>
     )
   }
 
   if (!results.result || results.result.length === 0) {
-    return <div className="px-4 py-12 text-center text-sm font-medium">{'Nothing here.'}</div>
+    return <div className="px-4 py-12 text-center font-medium text-sm">{'Nothing here.'}</div>
   }
 
   return (
@@ -223,7 +221,7 @@ export default function SearchModal({
             <Dialog.Panel className="relative z-10 my-12 inline-block w-full max-w-3xl transform overflow-hidden rounded border border-gray-400/30 text-left shadow-xl transition-all">
               <HiddenFocusGuard ref={searchFocusGuardRef} />
               <Dialog.Title className="sr-only">Search</Dialog.Title>
-              <div className="flex items-center gap-4 border-b border-gray-400/30 bg-gray-50 p-4 dark:bg-gray-800 dark:text-white">
+              <div className="flex items-center gap-4 border-gray-400/30 border-b bg-gray-50 p-4 dark:bg-gray-800 dark:text-white">
                 <FontAwesomeIcon icon="search" className="h-4 w-4" />
                 <input
                   type="text"
@@ -233,11 +231,11 @@ export default function SearchModal({
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                 />
-                <div className="flex-none rounded-lg bg-gray-200 px-2 py-1 text-xs font-medium dark:bg-gray-700">
+                <div className="flex-none rounded-lg bg-gray-200 px-2 py-1 font-medium text-xs dark:bg-gray-700">
                   ESC
                 </div>
               </div>
-              <div className="max-h-[80vh] overflow-x-hidden overflow-y-auto bg-white dark:bg-gray-900 dark:text-white">
+              <div className="max-h-[80vh] overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900 dark:text-white">
                 <SearchResults query={query} results={results} onSelect={closeSearchBox} />
               </div>
             </Dialog.Panel>

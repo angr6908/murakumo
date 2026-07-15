@@ -1,16 +1,15 @@
-import type { OdFileObject } from '../../types'
-import { FC, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/router'
+import { type FC, useEffect, useRef, useState } from 'react'
 
 import ReactAudioPlayer from 'react-audio-player'
-import { FontAwesomeIcon } from '../../utils/fontawesome'
-import { useRouter } from 'next/router'
-
-import DownloadButtonGroup from '../DownloadBtnGtoup'
-import { DownloadBtnContainer, PreviewContainer } from './Containers'
-import { LoadingIcon } from '../Loading'
+import type { OdFileObject } from '../../types'
 import { formatModifiedDateTime } from '../../utils/fileDetails'
+import { FontAwesomeIcon } from '../../utils/fontawesome'
 import { directFileUrl, thumbnailUrl } from '../../utils/odUrls'
 import { getStoredToken } from '../../utils/protectedRouteHandler'
+import DownloadButtonGroup from '../DownloadBtnGtoup'
+import { LoadingIcon } from '../Loading'
+import { DownloadBtnContainer, PreviewContainer } from './Containers'
 
 enum PlayerState {
   Loading,
@@ -89,8 +88,8 @@ const AudioPreview: FC<{ file: OdFileObject }> = ({ file }) => {
           <div className="flex w-full flex-col justify-between">
             <div>
               <div className="mb-2 font-medium">{file.name}</div>
-              <div className="mb-4 text-sm text-gray-500">
-                {'Last modified:' + ' ' + formatModifiedDateTime(file.lastModifiedDateTime)}
+              <div className="mb-4 text-gray-500 text-sm">
+                {`Last modified: ${formatModifiedDateTime(file.lastModifiedDateTime)}`}
               </div>
             </div>
 

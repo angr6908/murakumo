@@ -1,10 +1,9 @@
-import { GetServerSideProps } from 'next'
+import type { GetServerSideProps } from 'next'
 import { useRouter } from 'next/router'
-
-import { FontAwesomeIcon } from '../../utils/fontawesome'
 import OAuthCard from '../../components/OAuthCard'
 import PageLayout from '../../components/PageLayout'
 import apiConfig from '../../utils/apiConfig'
+import { FontAwesomeIcon } from '../../utils/fontawesome'
 import { getServerSidePublicConfigProps, type PublicRuntimeConfig } from '../../utils/publicRuntimeConfig'
 
 type OAuthConfig = {
@@ -44,7 +43,7 @@ export default function OAuthStep1({
         imageAlt="fabulous fireworks"
         stepTitle="Step 1/3: Preparations"
       >
-        <p className="py-1 text-sm font-medium text-yellow-400">
+        <p className="py-1 font-medium text-sm text-yellow-400">
           <FontAwesomeIcon icon="exclamation-triangle" className="mr-1" /> OAuth tokens are stored in Vercel Blob for
           this deployment. Make sure the Blob store is connected so the session survives redeploys and cold starts.
         </p>
@@ -72,14 +71,14 @@ export default function OAuthStep1({
           </table>
         </div>
 
-        <p className="py-1 text-sm font-medium">
+        <p className="py-1 font-medium text-sm">
           <FontAwesomeIcon icon="exclamation-triangle" className="mr-1 text-yellow-400" /> If you see anything missing
           or incorrect, update your Vercel environment variables and redeploy this instance.
         </p>
 
         <div className="mt-6 mb-2 text-right">
           <button
-            className="rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-gradient-to-bl"
+            className="rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2.5 text-center font-medium text-sm text-white hover:bg-gradient-to-bl"
             onClick={() => {
               router.push('/onedrive-vercel-index-plus-oauth/step-2')
             }}

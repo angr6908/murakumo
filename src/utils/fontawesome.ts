@@ -1,4 +1,5 @@
 import { config, library } from '@fortawesome/fontawesome-svg-core'
+import { faMarkdown } from '@fortawesome/free-brands-svg-icons'
 import {
   faArrowAltCircleDown,
   faCheckCircle,
@@ -19,7 +20,6 @@ import {
   faFolder,
   faTrashAlt,
 } from '@fortawesome/free-regular-svg-icons'
-import { faMarkdown } from '@fortawesome/free-brands-svg-icons'
 import {
   faAngleRight,
   faArrowLeft,

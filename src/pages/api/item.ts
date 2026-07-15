@@ -1,9 +1,8 @@
 import axios from 'axios'
 import type { NextApiRequest, NextApiResponse } from 'next'
-
+import apiConfig from '../../utils/apiConfig'
 import { graphHeaders, sendDriveError } from '../../utils/apiRoute'
 import { getAccessToken } from '../../utils/onedriveApi'
-import apiConfig from '../../utils/apiConfig'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const accessToken = await getAccessToken()

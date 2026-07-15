@@ -1,7 +1,6 @@
-import type { OdFolderChildren, OdFolderObject } from '../types'
-
-import { FC, MouseEventHandler, useEffect, useRef } from 'react'
+import { type FC, type MouseEventHandler, useEffect, useRef } from 'react'
 import { useClipboard } from 'use-clipboard-copy'
+import type { OdFolderChildren, OdFolderObject } from '../types'
 
 import { FontAwesomeIcon } from '../utils/fontawesome'
 import { getBaseUrl } from '../utils/getBaseUrl'
@@ -31,7 +30,7 @@ const emojiSegmenter =
   typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null
 const emojiPattern = (() => {
   try {
-    return new RegExp('\\p{Extended_Pictographic}|\\p{Regional_Indicator}', 'u')
+    return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u
   } catch {
     return /[\uD800-\uDBFF][\uDC00-\uDFFF]/
   }

@@ -1,6 +1,5 @@
-import type { OdFileObject } from '../../types'
-
 import { useRouter } from 'next/router'
+import type { OdFileObject } from '../../types'
 import { getBaseUrl } from '../../utils/getBaseUrl'
 import { directFileUrl } from '../../utils/odUrls'
 import { getStoredToken } from '../../utils/protectedRouteHandler'

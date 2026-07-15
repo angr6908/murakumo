@@ -1,8 +1,8 @@
-const defaultTheme = require('tailwindcss/defaultTheme')
-const colors = require('tailwindcss/colors')
+import type { Config } from 'tailwindcss'
+import colors from 'tailwindcss/colors'
+import defaultTheme from 'tailwindcss/defaultTheme'
 
-module.exports = {
-  content: ['./src/**/*.{js,ts,jsx,tsx}'],
+export default {
   theme: {
     colors: {
       transparent: 'transparent',
@@ -24,17 +24,16 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: [`"${process.env.GOOGLE_FONT_SANS || 'Inter'}"`, '"Noto Sans SC"', ...defaultTheme.fontFamily.sans],
-        mono: [`"${process.env.GOOGLE_FONT_MONO || 'Fira Mono'}"`, ...defaultTheme.fontFamily.mono]
+        mono: [`"${process.env.GOOGLE_FONT_MONO || 'Fira Mono'}"`, ...defaultTheme.fontFamily.mono],
       },
       colors: {
         gray: {
-          850: '#222226'
-        }
+          850: '#222226',
+        },
       },
       animation: {
         'spin-slow': 'spin 5s linear infinite',
-      }
-    }
+      },
+    },
   },
-  plugins: [],
-}
+} satisfies Config

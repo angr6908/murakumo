@@ -1,24 +1,21 @@
-import type { OdFileObject } from '../../types'
-
-import { FC, useEffect, useState } from 'react'
+import axios from 'axios'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
-
-import axios from 'axios'
-import toast from 'react-hot-toast'
+import { type FC, useEffect, useState } from 'react'
 import { useAsync } from 'react-async-hook'
+import toast from 'react-hot-toast'
 import { useClipboard } from 'use-clipboard-copy'
+import type { OdFileObject } from '../../types'
 
 import { getBaseUrl } from '../../utils/getBaseUrl'
 import { getExtension } from '../../utils/getFileIcon'
 import { directFileUrl, rawFileUrl, thumbnailUrl } from '../../utils/odUrls'
 import { getStoredToken } from '../../utils/protectedRouteHandler'
-
+import CustomEmbedLinkMenu from '../CustomEmbedLinkMenu'
 import { DownloadButton } from '../DownloadBtnGtoup'
-import { DownloadBtnContainer, PreviewContainer } from './Containers'
 import FourOhFour from '../FourOhFour'
 import Loading from '../Loading'
-import CustomEmbedLinkMenu from '../CustomEmbedLinkMenu'
+import { DownloadBtnContainer, PreviewContainer } from './Containers'
 
 import 'plyr-react/plyr.css'
 
@@ -142,7 +139,11 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
             { text: 'IINA', img: '/players/iina.png', url: `iina://weblink?url=${getBaseUrl()}${videoUrl}` },
             { text: 'VLC', img: '/players/vlc.png', url: `vlc://${getBaseUrl()}${videoUrl}` },
             { text: 'PotPlayer', img: '/players/potplayer.png', url: `potplayer://${getBaseUrl()}${videoUrl}` },
-            { text: 'nPlayer', img: '/players/nplayer.png', url: `nplayer-http://${window?.location.hostname ?? ''}${videoUrl}` },
+            {
+              text: 'nPlayer',
+              img: '/players/nplayer.png',
+              url: `nplayer-http://${window?.location.hostname ?? ''}${videoUrl}`,
+            },
           ].map(({ text, img, url }) => (
             <DownloadButton key={text} onClickCallback={() => window.open(url)} btnText={text} btnImage={img} />
           ))}

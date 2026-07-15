@@ -23,9 +23,15 @@ export default function useFileContent(
         if (!response.ok) throw new Error(response.statusText || `Request failed with ${response.status}`)
         return response.text()
       })
-      .then(text => { if (active) setResponse(text) })
-      .catch(error => { if (active && error.name !== 'AbortError') setError(error.message) })
-      .finally(() => { if (active) setValidating(false) })
+      .then(text => {
+        if (active) setResponse(text)
+      })
+      .catch(error => {
+        if (active && error.name !== 'AbortError') setError(error.message)
+      })
+      .finally(() => {
+        if (active) setValidating(false)
+      })
 
     return () => {
       active = false
