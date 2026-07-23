@@ -1,18 +1,14 @@
 import axios from 'axios'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/router'
-import { type FC, useEffect, useState } from 'react'
+import { type FC, useEffect } from 'react'
 import { useAsync } from 'react-async-hook'
-import toast from 'react-hot-toast'
-import { useClipboard } from 'use-clipboard-copy'
 import type { OdFileObject } from '../../types'
 
 import { getBaseUrl } from '../../utils/getBaseUrl'
-import { getExtension } from '../../utils/getFileIcon'
+import { getExtension, stripExtension } from '../../utils/getFileIcon'
 import { directFileUrl, rawFileUrl, thumbnailUrl } from '../../utils/odUrls'
-import { getStoredToken } from '../../utils/protectedRouteHandler'
-import CustomEmbedLinkMenu from '../CustomEmbedLinkMenu'
-import { DownloadButton } from '../DownloadBtnGtoup'
+import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
+import DownloadButtonGroup, { DownloadButton } from '../DownloadBtnGtoup'
 import FourOhFour from '../FourOhFour'
 import Loading from '../Loading'
 import { DownloadBtnContainer, PreviewContainer } from './Containers'
@@ -66,15 +62,10 @@ const VideoPlayer: FC<{
 }
 
 const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
-  const { asPath } = useRouter()
-  const hashedToken = getStoredToken(asPath)
-  const clipboard = useClipboard()
-
-  const [menuOpen, setMenuOpen] = useState(false)
+  const { asPath, hashedToken } = useCurrentPathToken()
 
   const thumbnail = thumbnailUrl(asPath, 'large', hashedToken)
-  const vtt = `${asPath.substring(0, asPath.lastIndexOf('.'))}.vtt`
-  const subtitle = rawFileUrl(vtt, hashedToken)
+  const subtitle = rawFileUrl(`${stripExtension(asPath)}.vtt`, hashedToken)
   const videoUrl = rawFileUrl(asPath, hashedToken)
   const playbackUrl = directFileUrl(file, asPath, hashedToken)
 
@@ -91,7 +82,6 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
 
   return (
     <>
-      <CustomEmbedLinkMenu path={asPath} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
       <PreviewContainer>
         {error ? (
           <FourOhFour errorMsg={error.message} />
@@ -112,29 +102,7 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
       </PreviewContainer>
 
       <DownloadBtnContainer>
-        <div className="flex flex-wrap justify-center gap-2">
-          <DownloadButton
-            onClickCallback={() => window.open(videoUrl)}
-            btnColor="blue"
-            btnText={'Download'}
-            btnIcon="file-download"
-          />
-          <DownloadButton
-            onClickCallback={() => {
-              clipboard.copy(rawFileUrl(asPath, hashedToken, getBaseUrl()))
-              toast.success('Copied direct link to clipboard.')
-            }}
-            btnColor="pink"
-            btnText={'Copy direct link'}
-            btnIcon="copy"
-          />
-          <DownloadButton
-            onClickCallback={() => setMenuOpen(true)}
-            btnColor="teal"
-            btnText={'Customise link'}
-            btnIcon="pen"
-          />
-
+        <DownloadButtonGroup>
           {[
             { text: 'IINA', img: '/players/iina.png', url: `iina://weblink?url=${getBaseUrl()}${videoUrl}` },
             { text: 'VLC', img: '/players/vlc.png', url: `vlc://${getBaseUrl()}${videoUrl}` },
@@ -147,7 +115,7 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
           ].map(({ text, img, url }) => (
             <DownloadButton key={text} onClickCallback={() => window.open(url)} btnText={text} btnImage={img} />
           ))}
-        </div>
+        </DownloadButtonGroup>
       </DownloadBtnContainer>
     </>
   )

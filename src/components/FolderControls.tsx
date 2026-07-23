@@ -1,11 +1,11 @@
 import { type FC, type MouseEventHandler, useEffect, useRef } from 'react'
-import { useClipboard } from 'use-clipboard-copy'
 import type { OdFolderChildren, OdFolderObject } from '../types'
 
 import { FontAwesomeIcon } from '../utils/fontawesome'
 import { getBaseUrl } from '../utils/getBaseUrl'
 import { getFileIcon, getRawExtension } from '../utils/getFileIcon'
 import { rawFileUrl } from '../utils/odUrls'
+import { useCopyLink } from '../utils/useCopyLink'
 import { LoadingIcon } from './Loading'
 
 export type FolderLayoutProps = {
@@ -20,7 +20,6 @@ export type FolderLayoutProps = {
   folderGenerating: Record<string, boolean>
   handleSelectedPermalink: (baseUrl: string) => string
   handleFolderDownload: (path: string, id: string, name?: string) => () => void
-  toast: any
 }
 
 const actionButtonClass =
@@ -28,13 +27,7 @@ const actionButtonClass =
 const itemActionClass = 'cursor-pointer rounded px-1.5 py-1 hover:bg-gray-300 dark:hover:bg-gray-600'
 const emojiSegmenter =
   typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null
-const emojiPattern = (() => {
-  try {
-    return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u
-  } catch {
-    return /[\uD800-\uDBFF][\uDC00-\uDFFF]/
-  }
-})()
+const emojiPattern = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u
 
 const firstGrapheme = (value: string) => {
   if (emojiSegmenter) return emojiSegmenter.segment(value)[Symbol.iterator]().next().value?.segment ?? ''
@@ -78,13 +71,12 @@ export const Checkbox: FC<{
   checked: 0 | 1 | 2
   onChange: () => void
   title: string
-  indeterminate?: boolean
-}> = ({ checked, onChange, title, indeterminate }) => {
+}> = ({ checked, onChange, title }) => {
   const ref = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (ref.current) ref.current.indeterminate = Boolean(indeterminate && checked === 1)
-  }, [checked, indeterminate])
+    if (ref.current) ref.current.indeterminate = checked === 1
+  }, [checked])
 
   const handleClick: MouseEventHandler = e => {
     if (e.target === ref.current) {
@@ -126,32 +118,23 @@ export function SelectedFilesControls({
   totalGenerating,
   handleSelectedDownload,
   handleSelectedPermalink,
-  toast,
 }: Pick<
   FolderLayoutProps,
-  | 'totalSelected'
-  | 'toggleTotalSelected'
-  | 'totalGenerating'
-  | 'handleSelectedDownload'
-  | 'handleSelectedPermalink'
-  | 'toast'
+  'totalSelected' | 'toggleTotalSelected' | 'totalGenerating' | 'handleSelectedDownload' | 'handleSelectedPermalink'
 > & {
   className: string
   selectTitle: string
 }) {
-  const clipboard = useClipboard()
+  const copyLink = useCopyLink()
 
   return (
     <div className={className}>
-      <Checkbox checked={totalSelected} onChange={toggleTotalSelected} indeterminate title={selectTitle} />
+      <Checkbox checked={totalSelected} onChange={toggleTotalSelected} title={selectTitle} />
       <button
         title={'Copy selected files permalink'}
         className={actionButtonClass}
         disabled={totalSelected === 0}
-        onClick={() => {
-          clipboard.copy(handleSelectedPermalink(getBaseUrl()))
-          toast.success('Copied selected files permalink.')
-        }}
+        onClick={() => copyLink(handleSelectedPermalink(getBaseUrl()), 'Copied selected files permalink.')}
       >
         <FontAwesomeIcon icon={['far', 'copy']} size="lg" />
       </button>
@@ -177,17 +160,16 @@ export function FolderChildActions({
   hashedToken,
   folderGenerating,
   handleFolderDownload,
-  toast,
   className,
   downloadBaseUrl = '',
-}: Pick<FolderLayoutProps, 'folderGenerating' | 'handleFolderDownload' | 'toast'> & {
+}: Pick<FolderLayoutProps, 'folderGenerating' | 'handleFolderDownload'> & {
   child: OdFolderChildren
   itemPath: string
   hashedToken: string | null
   className: string
   downloadBaseUrl?: string
 }) {
-  const clipboard = useClipboard()
+  const copyLink = useCopyLink()
 
   return (
     <div className={className}>
@@ -196,10 +178,7 @@ export function FolderChildActions({
           <span
             title={'Copy folder permalink'}
             className={itemActionClass}
-            onClick={() => {
-              clipboard.copy(`${getBaseUrl()}${itemPath}`)
-              toast('Copied folder permalink.', { icon: '👌' })
-            }}
+            onClick={() => copyLink(`${getBaseUrl()}${itemPath}`, 'Copied folder permalink.')}
           >
             <FontAwesomeIcon icon={['far', 'copy']} />
           </span>
@@ -220,10 +199,7 @@ export function FolderChildActions({
           <span
             title={'Copy raw file permalink'}
             className={itemActionClass}
-            onClick={() => {
-              clipboard.copy(rawFileUrl(itemPath, hashedToken, getBaseUrl()))
-              toast.success('Copied raw file permalink.')
-            }}
+            onClick={() => copyLink(rawFileUrl(itemPath, hashedToken, getBaseUrl()), 'Copied raw file permalink.')}
           >
             <FontAwesomeIcon icon={['far', 'copy']} />
           </span>

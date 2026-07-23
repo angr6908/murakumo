@@ -7,29 +7,26 @@ export type OdFolderObject = {
   '@odata.count': number
   '@odata.context': string
   '@odata.nextLink'?: string
-  value: Array<{
-    id: string
-    name: string
-    size: number
-    lastModifiedDateTime: string
-    file?: { mimeType: string; hashes: { quickXorHash?: string; sha1Hash?: string; sha256Hash?: string } }
-    folder?: { childCount: number; view: { sortBy: string; sortOrder: 'ascending'; viewType: 'thumbnails' } }
-    image?: OdImageFile
-    video?: OdVideoFile
-  }>
+  value: OdDriveItemBase[]
 }
-export type OdFolderChildren = OdFolderObject['value'][number]
-// A file object returned from the OneDrive API. This object may contain 'video' if the file is a video.
-export type OdFileObject = {
-  '@odata.context': string
-  '@microsoft.graph.downloadUrl'?: string
+// The fields every drive item carries, whether it arrived as a folder child or as a file response.
+// Helpers that work on both (icons, preview kind, path building) should accept this.
+export type OdDriveItemBase = {
+  id: string
   name: string
   size: number
-  id: string
   lastModifiedDateTime: string
-  file: { mimeType: string; hashes: { quickXorHash: string; sha1Hash?: string; sha256Hash?: string } }
+  file?: { mimeType: string; hashes: { quickXorHash?: string; sha1Hash?: string; sha256Hash?: string } }
+  folder?: { childCount: number; view: { sortBy: string; sortOrder: 'ascending'; viewType: 'thumbnails' } }
   image?: OdImageFile
   video?: OdVideoFile
+}
+export type OdFolderChildren = OdDriveItemBase
+// A file object returned from the OneDrive API. This object may contain 'video' if the file is a video.
+export type OdFileObject = OdDriveItemBase & {
+  '@odata.context': string
+  '@microsoft.graph.downloadUrl'?: string
+  file: { mimeType: string; hashes: { quickXorHash: string; sha1Hash?: string; sha256Hash?: string } }
 }
 // A representation of a OneDrive image file. Some images do not return a width and height, so types are optional.
 export type OdImageFile = {

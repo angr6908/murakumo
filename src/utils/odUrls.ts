@@ -6,6 +6,10 @@ export function appendProtectedToken(url: string, token?: string | null): string
   return token ? `${url}${url.includes('?') ? '&' : '?'}odpt=${token}` : url
 }
 
+export function driveListUrl(path: string, next?: string): string {
+  return `/api/?path=${path}${next ? `&next=${next}` : ''}`
+}
+
 export function rawFileUrl(path: string, token?: string | null, baseUrl = '', proxy = false): string {
   return appendProtectedToken(`${baseUrl}/api/raw/?path=${path}${proxy ? '&proxy=true' : ''}`, token)
 }

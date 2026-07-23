@@ -24,12 +24,36 @@ function parseStoredTokens(content: string, source: string): StoredTokens {
   }
 }
 
-async function readTokens(): Promise<StoredTokens> {
-  const blob = await get(tokenBlobPath, { ...blobAuthOptions, access: 'private', useCache: false })
-  if (!blob || blob.statusCode === 304 || !blob.stream) return {}
+const hasFreshAccessToken = (tokens: StoredTokens): boolean =>
+  typeof tokens.accessToken === 'string' &&
+  typeof tokens.accessTokenExpiresAt === 'number' &&
+  tokens.accessTokenExpiresAt > Date.now()
 
-  const content = await new Response(blob.stream).text()
-  return parseStoredTokens(content, `Vercel Blob ${tokenBlobPath}`)
+// Every API request needs the access token, so without this each one would cost a Blob origin
+// read. The token stays valid until its stored expiry, so it is safe to reuse until then; once
+// expired (or absent) we always go back to the store, which is also how an instance picks up a
+// token refreshed elsewhere.
+let cachedTokens: StoredTokens | null = null
+let inFlightRead: Promise<StoredTokens> | null = null
+
+async function fetchTokens(): Promise<StoredTokens> {
+  const blob = await get(tokenBlobPath, { ...blobAuthOptions, access: 'private', useCache: false })
+  const tokens =
+    !blob || blob.statusCode === 304 || !blob.stream
+      ? {}
+      : parseStoredTokens(await new Response(blob.stream).text(), `Vercel Blob ${tokenBlobPath}`)
+
+  cachedTokens = tokens
+  return tokens
+}
+
+function readTokens(): Promise<StoredTokens> {
+  if (cachedTokens && hasFreshAccessToken(cachedTokens)) return Promise.resolve(cachedTokens)
+
+  inFlightRead ??= fetchTokens().finally(() => {
+    inFlightRead = null
+  })
+  return inFlightRead
 }
 
 async function writeTokens(tokens: StoredTokens): Promise<void> {
@@ -40,17 +64,15 @@ async function writeTokens(tokens: StoredTokens): Promise<void> {
     contentType: 'application/json',
     cacheControlMaxAge: 60,
   })
+  cachedTokens = tokens
 }
 
-export async function getOdAuthTokens(): Promise<{ accessToken: unknown; refreshToken: unknown }> {
+export async function getOdAuthTokens(): Promise<{ accessToken: string | null; refreshToken: string | null }> {
   const tokens = await readTokens()
-  const accessToken =
-    typeof tokens.accessToken === 'string' &&
-    typeof tokens.accessTokenExpiresAt === 'number' &&
-    tokens.accessTokenExpiresAt > Date.now()
-      ? tokens.accessToken
-      : null
-  return { accessToken, refreshToken: tokens.refreshToken ?? null }
+  return {
+    accessToken: hasFreshAccessToken(tokens) ? (tokens.accessToken as string) : null,
+    refreshToken: tokens.refreshToken ?? null,
+  }
 }
 
 export async function storeOdAuthTokens({

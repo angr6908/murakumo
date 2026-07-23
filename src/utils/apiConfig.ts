@@ -22,4 +22,19 @@ const apiConfig: ApiConfig = {
   cacheControlHeader: getEnv('CACHE_CONTROL_HEADER', 'max-age=0, s-maxage=60, stale-while-revalidate'),
 }
 
+/** The subset of the API config the OAuth setup pages render and build their authorisation URL from. */
+export type OAuthPublicConfig = Pick<
+  ApiConfig,
+  'clientId' | 'obfuscatedClientSecret' | 'redirectUri' | 'authApi' | 'driveApi' | 'scope'
+>
+
+export const getOAuthPublicConfig = (): OAuthPublicConfig => ({
+  clientId: apiConfig.clientId,
+  obfuscatedClientSecret: apiConfig.obfuscatedClientSecret,
+  redirectUri: apiConfig.redirectUri,
+  authApi: apiConfig.authApi,
+  driveApi: apiConfig.driveApi,
+  scope: apiConfig.scope,
+})
+
 export default apiConfig

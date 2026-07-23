@@ -19,6 +19,18 @@ export function encodePath(path: string): string {
   return encodedPath === '/' || encodedPath === '' ? '' : `:${encodeURIComponent(encodedPath)}`
 }
 
+export const graphHeaders = (accessToken: string) => ({ Authorization: `Bearer ${accessToken}` })
+
+/**
+ * Build a Graph drive item URL. Graph requires the addressing colon to be closed before any
+ * sub-resource (`/children`, `/thumbnails`, `/search(...)`), except at the drive root.
+ */
+export function driveItemUrl(path: string, sub = ''): string {
+  const encodedPath = encodePath(path)
+  const separator = sub && encodedPath !== '' ? ':' : ''
+  return `${apiConfig.driveApi}/root${encodedPath}${separator}${sub}`
+}
+
 async function refreshAccessToken(refreshToken: string): Promise<string> {
   const body = new URLSearchParams({
     client_id: apiConfig.clientId,
@@ -53,12 +65,12 @@ export async function getAccessToken(): Promise<string> {
     return { accessToken: null, refreshToken: null }
   })
 
-  if (typeof accessToken === 'string') {
+  if (accessToken) {
     console.log('Fetch access token from storage.')
     return accessToken
   }
 
-  if (typeof refreshToken !== 'string') {
+  if (!refreshToken) {
     console.log('No refresh token, return empty access token.')
     return ''
   }
@@ -82,9 +94,9 @@ export async function getAccessToken(): Promise<string> {
   }
 }
 
-export function getAuthTokenPath(path: string) {
+function getAuthTokenPath(path: string) {
   const cleanPath = `${path.toLowerCase()}/`
-  const route = (siteConfig.protectedRoutes as string[])
+  const route = siteConfig.protectedRoutes
     .filter((r): r is string => typeof r === 'string')
     .map(r => `${r.toLowerCase().replace(/\/$/, '')}/`)
     .find(r => cleanPath.startsWith(r))
@@ -103,8 +115,8 @@ export async function checkAuthRoute(
   }
 
   try {
-    const token = await axios.get(`${apiConfig.driveApi}/root${encodePath(authTokenPath)}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+    const token = await axios.get(driveItemUrl(authTokenPath), {
+      headers: graphHeaders(accessToken),
       params: {
         select: '@microsoft.graph.downloadUrl,file',
       },

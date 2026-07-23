@@ -26,7 +26,7 @@ export const defaultSiteConfig: PublicRuntimeConfig = {
   googleFontMono: 'Fira Mono',
   googleFontLinks: ['https://fonts.googleapis.com/css2?family=Fira+Mono&family=Inter:wght@400;500;700&display=swap'],
   footer:
-    'Powered by <a href="https://github.com/angr6908/onedrive-vercel-index-plus" target="_blank" rel="noopener noreferrer">onedrive-vercel-index-plus</a>.',
+    'Powered by <a href="https://github.com/angr6908/murakumo" target="_blank" rel="noopener noreferrer">Murakumo</a>.',
   protectedRoutes: [],
   email: '',
   links: [],

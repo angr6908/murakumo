@@ -1,60 +1,18 @@
-import { useRouter } from 'next/router'
 import type { FC } from 'react'
-import useFileContent from '../../utils/fetchOnMount'
-import { rawFileUrl } from '../../utils/odUrls'
-import DownloadButtonGroup from '../DownloadBtnGtoup'
-import FourOhFour from '../FourOhFour'
-import Loading from '../Loading'
-import { DownloadBtnContainer, PreviewContainer } from './Containers'
+import { DownloadFooter, PreviewContainer } from './Containers'
+import FileContentPreview from './FileContentPreview'
 
-const TextPreview: FC<{ file: any }> = () => {
-  const { asPath } = useRouter()
-
-  const { response: content, error, validating } = useFileContent(rawFileUrl(asPath, null, '', true), asPath)
-  if (error) {
-    return (
-      <PreviewContainer>
-        <FourOhFour errorMsg={error} />
-      </PreviewContainer>
-    )
-  }
-
-  if (validating) {
-    return (
-      <>
+const TextPreview: FC = () => (
+  <FileContentPreview>
+    {content => (
+      <div>
         <PreviewContainer>
-          <Loading loadingText={'Loading file content...'} />
+          <pre className="overflow-x-scroll p-0 text-sm md:p-3">{content}</pre>
         </PreviewContainer>
-        <DownloadBtnContainer>
-          <DownloadButtonGroup />
-        </DownloadBtnContainer>
-      </>
-    )
-  }
-
-  if (!content) {
-    return (
-      <>
-        <PreviewContainer>
-          <FourOhFour errorMsg={'File is empty.'} />
-        </PreviewContainer>
-        <DownloadBtnContainer>
-          <DownloadButtonGroup />
-        </DownloadBtnContainer>
-      </>
-    )
-  }
-
-  return (
-    <div>
-      <PreviewContainer>
-        <pre className="overflow-x-scroll p-0 text-sm md:p-3">{content}</pre>
-      </PreviewContainer>
-      <DownloadBtnContainer>
-        <DownloadButtonGroup />
-      </DownloadBtnContainer>
-    </div>
-  )
-}
+        <DownloadFooter />
+      </div>
+    )}
+  </FileContentPreview>
+)
 
 export default TextPreview

@@ -1,4 +1,3 @@
-import { useRouter } from 'next/router'
 import { type FC, useEffect, useRef, useState } from 'react'
 
 import ReactAudioPlayer from 'react-audio-player'
@@ -6,10 +5,9 @@ import type { OdFileObject } from '../../types'
 import { formatModifiedDateTime } from '../../utils/fileDetails'
 import { FontAwesomeIcon } from '../../utils/fontawesome'
 import { directFileUrl, thumbnailUrl } from '../../utils/odUrls'
-import { getStoredToken } from '../../utils/protectedRouteHandler'
-import DownloadButtonGroup from '../DownloadBtnGtoup'
+import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
 import { LoadingIcon } from '../Loading'
-import { DownloadBtnContainer, PreviewContainer } from './Containers'
+import { DownloadFooter, PreviewContainer } from './Containers'
 
 enum PlayerState {
   Loading,
@@ -19,8 +17,7 @@ enum PlayerState {
 }
 
 const AudioPreview: FC<{ file: OdFileObject }> = ({ file }) => {
-  const { asPath } = useRouter()
-  const hashedToken = getStoredToken(asPath)
+  const { asPath, hashedToken } = useCurrentPathToken()
 
   const rapRef = useRef<ReactAudioPlayer>(null)
   const [playerStatus, setPlayerStatus] = useState(PlayerState.Loading)
@@ -65,7 +62,7 @@ const AudioPreview: FC<{ file: OdFileObject }> = ({ file }) => {
 
             {!brokenThumbnail ? (
               <div className="absolute m-4 aspect-square rounded-full shadow-lg">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {/* biome-ignore lint/performance/noImgElement: images.unoptimized is set in next.config.ts, and the onError fallback below needs a plain img */}
                 <img
                   className={`h-full w-full rounded-full object-cover object-top ${
                     playerStatus === PlayerState.Playing ? 'animate-spin-slow' : ''
@@ -105,9 +102,7 @@ const AudioPreview: FC<{ file: OdFileObject }> = ({ file }) => {
         </div>
       </PreviewContainer>
 
-      <DownloadBtnContainer>
-        <DownloadButtonGroup />
-      </DownloadBtnContainer>
+      <DownloadFooter />
     </>
   )
 }

@@ -1,8 +1,7 @@
 import axios from 'axios'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import apiConfig from '../../utils/apiConfig'
-import { graphHeaders, requireAccessToken, sendDriveError } from '../../utils/apiRoute'
-import { encodePath } from '../../utils/onedriveApi'
+import { driveItemUrl, graphHeaders, requireAccessToken, sendDriveError } from '../../utils/apiRoute'
 import siteConfig from '../../utils/siteConfig'
 
 function sanitizeQuery(query: string): string {
@@ -30,9 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const accessToken = await requireAccessToken(res)
   if (!accessToken) return
 
-  const searchRootPath = encodePath('/')
-  const encodedPath = searchRootPath === '' ? searchRootPath : `${searchRootPath}:`
-  const searchApi = `${apiConfig.driveApi}/root${encodedPath}/search(q='${sanitizeQuery(cleanQuery)}')`
+  const searchApi = driveItemUrl('/', `/search(q='${sanitizeQuery(cleanQuery)}')`)
 
   try {
     const { data } = await axios.get(searchApi, {

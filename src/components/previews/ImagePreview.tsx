@@ -1,20 +1,16 @@
-import { useRouter } from 'next/router'
-
 import type { FC } from 'react'
 import type { OdFileObject } from '../../types'
 import { directFileUrl } from '../../utils/odUrls'
-import { getStoredToken } from '../../utils/protectedRouteHandler'
-import DownloadButtonGroup from '../DownloadBtnGtoup'
-import { DownloadBtnContainer, PreviewContainer } from './Containers'
+import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
+import { DownloadFooter, PreviewContainer } from './Containers'
 
 const ImagePreview: FC<{ file: OdFileObject }> = ({ file }) => {
-  const { asPath } = useRouter()
-  const hashedToken = getStoredToken(asPath)
+  const { asPath, hashedToken } = useCurrentPathToken()
 
   return (
     <>
       <PreviewContainer>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* biome-ignore lint/performance/noImgElement: images.unoptimized is set in next.config.ts, so next/image adds no optimisation here, and the intrinsic size is only known at runtime */}
         <img
           className="mx-auto"
           src={directFileUrl(file, asPath, hashedToken)}
@@ -24,9 +20,7 @@ const ImagePreview: FC<{ file: OdFileObject }> = ({ file }) => {
           decoding="async"
         />
       </PreviewContainer>
-      <DownloadBtnContainer>
-        <DownloadButtonGroup />
-      </DownloadBtnContainer>
+      <DownloadFooter />
     </>
   )
 }

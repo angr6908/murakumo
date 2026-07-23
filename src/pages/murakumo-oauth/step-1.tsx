@@ -2,18 +2,9 @@ import type { GetServerSideProps } from 'next'
 import { useRouter } from 'next/router'
 import OAuthCard from '../../components/OAuthCard'
 import PageLayout from '../../components/PageLayout'
-import apiConfig from '../../utils/apiConfig'
+import { getOAuthPublicConfig, type OAuthPublicConfig } from '../../utils/apiConfig'
 import { FontAwesomeIcon } from '../../utils/fontawesome'
-import { getServerSidePublicConfigProps, type PublicRuntimeConfig } from '../../utils/publicRuntimeConfig'
-
-type OAuthConfig = {
-  clientId: string
-  obfuscatedClientSecret: string
-  redirectUri: string
-  authApi: string
-  driveApi: string
-  scope: string
-}
+import { getServerSidePublicConfigProps, type PublicConfigProps } from '../../utils/serverConfig'
 
 const labelClass =
   'bg-gray-50 px-3 py-1 text-left text-xs font-medium tracking-wider text-gray-700 uppercase dark:bg-gray-800 dark:text-gray-400'
@@ -21,11 +12,9 @@ const valueClass = 'px-3 py-1 whitespace-nowrap text-gray-500 dark:text-gray-400
 
 export default function OAuthStep1({
   publicConfig,
+  brandIcons,
   oauthConfig,
-}: {
-  publicConfig: PublicRuntimeConfig
-  oauthConfig: OAuthConfig
-}) {
+}: PublicConfigProps & { oauthConfig: OAuthPublicConfig }) {
   const router = useRouter()
   const configRows = [
     ['CLIENT_ID', oauthConfig.clientId],
@@ -37,7 +26,7 @@ export default function OAuthStep1({
   ]
 
   return (
-    <PageLayout title={`OAuth Step 1 - ${publicConfig.title}`}>
+    <PageLayout title={`OAuth Step 1 - ${publicConfig.title}`} brandIcons={brandIcons}>
       <OAuthCard
         imageSrc="/images/fabulous-fireworks.png"
         imageAlt="fabulous fireworks"
@@ -53,7 +42,7 @@ export default function OAuthStep1({
           <code className="font-mono text-sm underline decoration-pink-600 decoration-wavy">access_token</code> or{' '}
           <code className="font-mono text-sm underline decoration-green-600 decoration-wavy">refresh_token</code> is
           present on this deployed instance. Check the following configurations before proceeding with authorising
-          onedrive-vercel-index-plus with your own Microsoft account.
+          Murakumo with your own Microsoft account.
         </p>
 
         <div className="my-4 overflow-hidden">
@@ -80,7 +69,7 @@ export default function OAuthStep1({
           <button
             className="rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2.5 text-center font-medium text-sm text-white hover:bg-gradient-to-bl"
             onClick={() => {
-              router.push('/onedrive-vercel-index-plus-oauth/step-2')
+              router.push('/murakumo-oauth/step-2')
             }}
           >
             <span>Proceed to OAuth</span> <FontAwesomeIcon icon="arrow-right" />
@@ -91,20 +80,6 @@ export default function OAuthStep1({
   )
 }
 
-export const getServerSideProps: GetServerSideProps = async () => {
-  const baseProps = getServerSidePublicConfigProps()
-
-  return {
-    props: {
-      ...baseProps.props,
-      oauthConfig: {
-        clientId: apiConfig.clientId,
-        obfuscatedClientSecret: apiConfig.obfuscatedClientSecret,
-        redirectUri: apiConfig.redirectUri,
-        authApi: apiConfig.authApi,
-        driveApi: apiConfig.driveApi,
-        scope: apiConfig.scope,
-      },
-    },
-  }
-}
+export const getServerSideProps: GetServerSideProps = async () => ({
+  props: { ...getServerSidePublicConfigProps().props, oauthConfig: getOAuthPublicConfig() },
+})

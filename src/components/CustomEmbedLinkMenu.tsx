@@ -1,13 +1,14 @@
-import { Dialog, Transition } from '@headlessui/react'
-import { type Dispatch, Fragment, type SetStateAction, useRef, useState } from 'react'
+import { Dialog } from '@headlessui/react'
+import { type Dispatch, type SetStateAction, useRef, useState } from 'react'
 import { useClipboard } from 'use-clipboard-copy'
+import { basename } from '../utils/drivePath'
 import { FontAwesomeIcon } from '../utils/fontawesome'
-
 import { getBaseUrl } from '../utils/getBaseUrl'
 import { getReadablePath } from '../utils/getReadablePath'
 import { namedRawFileUrl, rawFileUrl } from '../utils/odUrls'
 import { getStoredToken } from '../utils/protectedRouteHandler'
 import HiddenFocusGuard from './HiddenFocusGuard'
+import ModalShell from './ModalShell'
 
 function LinkContainer({ title, value }: { title: string; value: string }) {
   const clipboard = useClipboard({ copiedTimeout: 1000 })
@@ -42,83 +43,48 @@ export default function CustomEmbedLinkMenu({
   const closeMenu = () => setMenuOpen(false)
 
   const readablePath = getReadablePath(path)
-  const filename = readablePath.substring(readablePath.lastIndexOf('/') + 1)
-  const [name, setName] = useState(filename)
+  const [name, setName] = useState(() => basename(readablePath))
 
   return (
-    <Transition appear show={menuOpen} as={Fragment}>
-      <Dialog
-        as="div"
-        className="fixed inset-0 z-10 overflow-y-auto"
-        onClose={closeMenu}
-        initialFocus={menuFocusGuardRef}
-      >
-        <div className="min-h-screen px-4 text-center">
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-100"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-100"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-white/60 dark:bg-gray-800/60" />
-          </Transition.Child>
+    <ModalShell
+      open={menuOpen}
+      onClose={closeMenu}
+      initialFocus={menuFocusGuardRef}
+      backdropClassName="bg-white/60 dark:bg-gray-800/60"
+      panelClassName="inline-block max-h-[80vh] w-full max-w-3xl transform overflow-hidden overflow-y-scroll rounded border border-gray-400/30 bg-white p-4 text-left align-middle text-sm shadow-xl transition-all dark:bg-gray-900 dark:text-white"
+    >
+      <HiddenFocusGuard ref={menuFocusGuardRef} />
+      <Dialog.Title as="h3" className="py-2 font-bold text-xl">
+        {'Customise direct link'}
+      </Dialog.Title>
+      <Dialog.Description as="p" className="py-2 opacity-80">
+        {'Change the raw file direct link to a URL ending with the extension of the file.'}{' '}
+        <a
+          href="https://ovi.swo.moe/docs/features/customise-direct-link"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 underline"
+        >
+          {'What is this?'}
+        </a>
+      </Dialog.Description>
 
-          {/* This element is to trick the browser into centering the modal contents. */}
-          <span className="inline-block h-screen align-middle" aria-hidden="true">
-            &#8203;
-          </span>
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-100"
-            enterFrom="opacity-0 scale-95"
-            enterTo="opacity-100 scale-100"
-            leave="ease-in duration-100"
-            leaveFrom="opacity-100 scale-100"
-            leaveTo="opacity-0 scale-95"
-          >
-            <div className="inline-block max-h-[80vh] w-full max-w-3xl transform overflow-hidden overflow-y-scroll rounded border border-gray-400/30 bg-white p-4 text-left align-middle text-sm shadow-xl transition-all dark:bg-gray-900 dark:text-white">
-              <HiddenFocusGuard ref={menuFocusGuardRef} />
-              <Dialog.Title as="h3" className="py-2 font-bold text-xl">
-                {'Customise direct link'}
-              </Dialog.Title>
-              <Dialog.Description as="p" className="py-2 opacity-80">
-                {'Change the raw file direct link to a URL ending with the extension of the file.'}{' '}
-                <a
-                  href="https://ovi.swo.moe/docs/features/customise-direct-link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 underline"
-                >
-                  {'What is this?'}
-                </a>
-              </Dialog.Description>
+      <div className="mt-4">
+        <h4 className="py-2 font-medium text-xs uppercase tracking-wider">{'Filename'}</h4>
+        <input
+          className="mb-2 w-full rounded border border-gray-600/10 p-2.5 font-mono dark:bg-gray-600 dark:text-white"
+          value={name}
+          onChange={e => setName(e.target.value)}
+        />
 
-              <div className="mt-4">
-                <h4 className="py-2 font-medium text-xs uppercase tracking-wider">{'Filename'}</h4>
-                <input
-                  className="mb-2 w-full rounded border border-gray-600/10 p-2.5 font-mono dark:bg-gray-600 dark:text-white"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                />
-
-                <LinkContainer title={'Default'} value={rawFileUrl(readablePath, hashedToken, getBaseUrl())} />
-                <LinkContainer title={'URL encoded'} value={rawFileUrl(path, hashedToken, getBaseUrl())} />
-                <LinkContainer
-                  title={'Customised'}
-                  value={namedRawFileUrl(name, readablePath, hashedToken, getBaseUrl())}
-                />
-                <LinkContainer
-                  title={'Customised and encoded'}
-                  value={namedRawFileUrl(name, path, hashedToken, getBaseUrl())}
-                />
-              </div>
-            </div>
-          </Transition.Child>
-        </div>
-      </Dialog>
-    </Transition>
+        <LinkContainer title={'Default'} value={rawFileUrl(readablePath, hashedToken, getBaseUrl())} />
+        <LinkContainer title={'URL encoded'} value={rawFileUrl(path, hashedToken, getBaseUrl())} />
+        <LinkContainer title={'Customised'} value={namedRawFileUrl(name, readablePath, hashedToken, getBaseUrl())} />
+        <LinkContainer
+          title={'Customised and encoded'}
+          value={namedRawFileUrl(name, path, hashedToken, getBaseUrl())}
+        />
+      </div>
+    </ModalShell>
   )
 }

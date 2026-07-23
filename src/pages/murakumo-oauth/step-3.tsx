@@ -7,7 +7,7 @@ import OAuthCard from '../../components/OAuthCard'
 import PageLayout from '../../components/PageLayout'
 import { FontAwesomeIcon } from '../../utils/fontawesome'
 import { requestTokenWithAuthCode, sendTokenToServer } from '../../utils/oAuthHandler'
-import { getServerSidePublicConfigProps, type PublicRuntimeConfig } from '../../utils/publicRuntimeConfig'
+import { getServerSidePublicConfigProps, type PublicConfigProps } from '../../utils/serverConfig'
 
 type StoreTokenStatus = 'idle' | 'loading' | 'stored' | 'error'
 
@@ -48,14 +48,14 @@ export default function OAuthStep3({
   description,
   errorUri,
   publicConfig,
-}: {
+  brandIcons,
+}: PublicConfigProps & {
   accessToken?: string
   expiryTime?: number
   refreshToken?: string
   error?: string | null
   description?: string
   errorUri?: string
-  publicConfig: PublicRuntimeConfig
 }) {
   const router = useRouter()
   const [expiryTimeLeft, setExpiryTimeLeft] = useState(expiryTime)
@@ -99,7 +99,7 @@ export default function OAuthStep3({
   }
 
   return (
-    <PageLayout title={`OAuth Step 3 - ${publicConfig.title}`}>
+    <PageLayout title={`OAuth Step 3 - ${publicConfig.title}`} brandIcons={brandIcons}>
       <OAuthCard
         imageSrc="/images/fabulous-celebration.png"
         imageAlt="fabulous celebration"
@@ -133,7 +133,7 @@ export default function OAuthStep3({
               <button
                 className="rounded-lg bg-gradient-to-br from-red-500 to-orange-400 px-4 py-2.5 text-center font-medium text-sm text-white hover:bg-gradient-to-bl disabled:cursor-not-allowed disabled:grayscale"
                 onClick={() => {
-                  router.push('/onedrive-vercel-index-plus-oauth/step-1')
+                  router.push('/murakumo-oauth/step-1')
                 }}
               >
                 <FontAwesomeIcon icon="arrow-left" /> <span>Restart</span>
@@ -171,7 +171,7 @@ export default function OAuthStep3({
             </p>
             <p className="py-1">
               {`Final step, click the button below to store these tokens persistently before they expire after ${Math.floor(remainingExpiryTime / 60)} minutes ${remainingExpiryTime - Math.floor(remainingExpiryTime / 60) * 60} seconds. `}
-              {`Don't worry, after storing them, onedrive-vercel-index-plus will take care of token refreshes and updates after your site goes live.`}
+              {`Don't worry, after storing them, Murakumo will take care of token refreshes and updates after your site goes live.`}
             </p>
 
             <div className="mt-6 mb-2 text-right">

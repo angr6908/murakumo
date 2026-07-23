@@ -1,17 +1,13 @@
-import { useRouter } from 'next/router'
-
 import { type FC, useEffect, useRef, useState } from 'react'
 import { ReactReader } from 'react-reader'
 import type { OdFileObject } from '../../types'
 import { directFileUrl } from '../../utils/odUrls'
-import { getStoredToken } from '../../utils/protectedRouteHandler'
-import DownloadButtonGroup from '../DownloadBtnGtoup'
+import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
 import Loading from '../Loading'
-import { DownloadBtnContainer } from './Containers'
+import { DownloadFooter } from './Containers'
 
 const EPUBPreview: FC<{ file: OdFileObject }> = ({ file }) => {
-  const { asPath } = useRouter()
-  const hashedToken = getStoredToken(asPath)
+  const { asPath, hashedToken } = useCurrentPathToken()
 
   const [epubContainerWidth, setEpubContainerWidth] = useState(400)
   const epubContainer = useRef<HTMLDivElement>(null)
@@ -64,9 +60,7 @@ const EPUBPreview: FC<{ file: OdFileObject }> = ({ file }) => {
           </div>
         </div>
       </div>
-      <DownloadBtnContainer>
-        <DownloadButtonGroup />
-      </DownloadBtnContainer>
+      <DownloadFooter />
     </div>
   )
 }

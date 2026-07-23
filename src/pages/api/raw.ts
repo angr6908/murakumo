@@ -4,13 +4,14 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 
 import apiConfig from '../../utils/apiConfig'
 import {
+  driveItemUrl,
   graphHeaders,
   normalisePathQuery,
   requireAccessToken,
   sendDriveError,
   verifyProtectedPath,
 } from '../../utils/apiRoute'
-import { encodePath, runCorsMiddleware } from '../../utils/onedriveApi'
+import { runCorsMiddleware } from '../../utils/onedriveApi'
 
 const shouldProxyFile = (proxy: NextApiRequest['query'][string]) => proxy === 'true' || proxy === '1'
 const toOutgoingHeaders = (
@@ -24,9 +25,6 @@ const toOutgoingHeaders = (
 })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const accessToken = await requireAccessToken(res)
-  if (!accessToken) return
-
   const { path = '/', odpt = '', proxy } = req.query
 
   const pathQuery = normalisePathQuery(path)
@@ -35,6 +33,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return
   }
 
+  const accessToken = await requireAccessToken(res)
+  if (!accessToken) return
+
   const odTokenHeader = (req.headers['od-protected-token'] as string) ?? odpt
   const hasAccess = await verifyProtectedPath(res, pathQuery.path, accessToken, odTokenHeader as string)
   if (!hasAccess) return
@@ -42,8 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   await runCorsMiddleware(req, res)
   try {
-    const requestUrl = `${apiConfig.driveApi}/root${encodePath(pathQuery.path)}`
-    const { data } = await axios.get(requestUrl, {
+    const { data } = await axios.get(driveItemUrl(pathQuery.path), {
       headers: graphHeaders(accessToken),
       params: { select: 'id,size,@microsoft.graph.downloadUrl' },
     })

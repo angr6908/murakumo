@@ -3,7 +3,7 @@ import type { NextApiResponse } from 'next'
 
 import { checkAuthRoute, getAccessToken } from './onedriveApi'
 
-export const graphHeaders = (accessToken: string) => ({ Authorization: `Bearer ${accessToken}` })
+export { driveItemUrl, graphHeaders } from './onedriveApi'
 
 export async function requireAccessToken(res: NextApiResponse): Promise<string | null> {
   const accessToken = await getAccessToken()
@@ -19,9 +19,6 @@ export function normalisePathQuery(
 ): { path: string; error?: never } | { path?: never; error: string } {
   const path = value ?? '/'
 
-  if (path === '[...path]') {
-    return { error: 'No path specified.' }
-  }
   if (typeof path !== 'string') {
     return { error: 'Path query invalid.' }
   }

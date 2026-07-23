@@ -1,14 +1,16 @@
+import type JSZip from 'jszip'
 import type { NextRouter } from 'next/router'
 import toast from 'react-hot-toast'
 import { getItemPath } from '../utils/drivePath'
 import { fetcher } from '../utils/fetchWithSWR'
+import { driveListUrl } from '../utils/odUrls'
 import { getStoredToken } from '../utils/protectedRouteHandler'
 
 export function DownloadingToast({ router, progress }: { router: NextRouter; progress?: string }) {
   return (
     <div className="flex items-center space-x-2">
       <div className="w-56">
-        <span>{progress ? 'Downloading {{progress}}%' : 'Downloading selected files...'}</span>
+        <span>{progress ? `Downloading ${progress}%` : 'Downloading selected files...'}</span>
 
         <div className="relative mt-2">
           <div className="flex h-1 overflow-hidden rounded bg-gray-100">
@@ -33,7 +35,7 @@ export function downloadUrl(url: string, name?: string) {
   el.remove()
 }
 
-export function downloadBlob({ blob, name }: { blob: Blob; name: string }) {
+function downloadBlob({ blob, name }: { blob: Blob; name: string }) {
   const bUrl = window.URL.createObjectURL(blob)
   downloadUrl(bUrl, name)
   window.URL.revokeObjectURL(bUrl)
@@ -44,6 +46,14 @@ const updateProgress = (toastId: string, router: NextRouter) => (metadata: { per
   toast.loading(<DownloadingToast router={router} progress={metadata.percent.toFixed(0)} />, { id: toastId })
 }
 const createZip = async () => new (await import('jszip')).default()
+
+// JSZip types folder() as nullable, since it doubles as a lookup that misses.
+// Creating a folder always yields a handle, so surface a real error if it ever does not.
+const zipFolder = (zip: JSZip, name: string): JSZip => {
+  const dir = zip.folder(name)
+  if (!dir) throw new Error(`Could not create folder "${name}" in the generated zip`)
+  return dir
+}
 
 export async function downloadMultipleFiles({
   toastId,
@@ -57,7 +67,7 @@ export async function downloadMultipleFiles({
   folder?: string
 }): Promise<void> {
   const zip = await createZip()
-  const dir = folder ? zip.folder(folder)! : zip
+  const dir = folder ? zipFolder(zip, folder) : zip
 
   files.forEach(({ name, url }) => {
     dir.file(
@@ -89,24 +99,22 @@ export async function downloadTreelikeMultipleFiles({
   folder?: string
 }): Promise<void> {
   const zip = await createZip()
-  const root = folder ? zip.folder(folder)! : zip
+  const root = folder ? zipFolder(zip, folder) : zip
   const map = [{ path: basePath, dir: root }]
 
   // Add selected file blobs to zip according to its path
   for await (const { name, url, path, isFolder } of files) {
-    const i = map
-      .slice()
-      .reverse()
-      .findIndex(({ path: parent }) => isDirectChild(parent, path))
-    if (i === -1) throw new Error('File array does not satisfy requirement')
+    const parent = map.findLast(({ path: parentPath }) => isDirectChild(parentPath, path))
+    if (!parent) throw new Error('File array does not satisfy requirement')
 
-    const dir = map[map.length - 1 - i].dir
+    const dir = parent.dir
     if (isFolder) {
-      map.push({ path, dir: dir.folder(name)! })
+      map.push({ path, dir: zipFolder(dir, name) })
     } else {
+      if (!url) throw new Error(`Missing download URL for "${path}"`)
       dir.file(
         name,
-        fetch(url!).then(r => r.blob()),
+        fetch(url).then(r => r.blob()),
       )
     }
   }
@@ -132,25 +140,31 @@ export async function* traverseFolder(path: string): AsyncGenerator<TraverseItem
     return {
       i,
       path,
-      data: await fetcher([
-        next ? `/api/?path=${path}&next=${next}` : `/api?path=${path}`,
-        hashedToken ?? undefined,
-      ]).catch(error => ({ i, path, error })),
+      data: await fetcher([driveListUrl(path, next), hashedToken ?? undefined]).catch(error => ({ i, path, error })),
     }
   }
 
-  const pool = [genTask(0, path)]
-  const activeTasks = () => pool.filter(Boolean)
+  // Keyed by task id so the race set stays proportional to the tasks still in flight, rather
+  // than to every task ever started.
+  const pool = new Map<number, ReturnType<typeof genTask>>()
   const buf: { [k: string]: TraverseItem[] } = {}
+  let nextTaskId = 0
 
-  while (activeTasks().length > 0) {
+  const addTask = (path: string, next?: string) => {
+    const i = nextTaskId++
+    pool.set(i, genTask(i, path, next))
+  }
+
+  addTask(path)
+
+  while (pool.size > 0) {
     let info: { i: number; path: string; data: any }
     try {
-      info = await Promise.race(activeTasks())
+      info = await Promise.race(pool.values())
     } catch (error: any) {
       const { i, path, error: innerError } = error
       if (Math.floor(innerError.status / 100) === 4) {
-        delete pool[i]
+        pool.delete(i)
         yield {
           path,
           meta: {},
@@ -165,7 +179,7 @@ export async function* traverseFolder(path: string): AsyncGenerator<TraverseItem
 
     const { i, path, data } = info
     if (!data?.folder) throw new Error('Path is not folder')
-    delete pool[i]
+    pool.delete(i)
 
     const items = data.folder.value.map((c: any) => ({
       path: getItemPath(path, c.name),
@@ -175,18 +189,12 @@ export async function* traverseFolder(path: string): AsyncGenerator<TraverseItem
 
     if (data.next) {
       buf[path] = (buf[path] ?? []).concat(items)
-      const i = pool.length
-      pool[i] = genTask(i, path, data.next)
+      addTask(path, data.next)
     } else {
       const allItems = (buf[path] ?? []).concat(items)
       if (buf[path]) delete buf[path]
 
-      allItems
-        .filter(item => item.isFolder)
-        .forEach(item => {
-          const i = pool.length
-          pool[i] = genTask(i, item.path)
-        })
+      for (const item of allItems.filter(item => item.isFolder)) addTask(item.path)
       yield* allItems
     }
   }

@@ -1,10 +1,10 @@
 import type { ParsedUrlQuery } from 'node:querystring'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
-import { type FC, type ReactElement, useState } from 'react'
-import toast, { Toaster } from 'react-hot-toast'
+import { type FC, type ReactElement, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import type { OdFileObject, OdFolderObject } from '../types'
-import { getItemPath, isNotPersonalVaultItem, queryToPath } from '../utils/drivePath'
+import { basename, getItemPath, isNotPersonalVaultItem, queryToPath } from '../utils/drivePath'
 import { useProtectedSWRInfinite } from '../utils/fetchWithSWR'
 import { FontAwesomeIcon } from '../utils/fontawesome'
 import { getExtension } from '../utils/getFileIcon'
@@ -50,7 +50,7 @@ type PreviewRenderer = (file: OdFileObject, path: string) => ReactElement
 
 const previewRenderers: Record<string, PreviewRenderer> = {
   [preview.image]: file => <ImagePreview file={file} />,
-  [preview.text]: file => <TextPreview file={file} />,
+  [preview.text]: () => <TextPreview />,
   [preview.code]: file => <CodePreview file={file} />,
   [preview.markdown]: (file, path) => <MarkdownPreview file={file} path={path} />,
   [preview.video]: file => <VideoPreview file={file} />,
@@ -58,7 +58,7 @@ const previewRenderers: Record<string, PreviewRenderer> = {
   [preview.pdf]: file => <PDFPreview file={file} />,
   [preview.office]: file => <OfficePreview file={file} />,
   [preview.epub]: file => <EPUBPreview file={file} />,
-  [preview.url]: file => <URLPreview file={file} />,
+  [preview.url]: () => <URLPreview />,
   default: file => <DefaultPreview file={file} />,
 }
 
@@ -72,16 +72,14 @@ type SelectedFiles = Record<string, boolean>
 type SelectionState = 0 | 1 | 2
 
 const getSelectionState = (files: OdFolderObject['value'], selected: SelectedFiles): SelectionState => {
-  const selectedStates = files.map(file => Boolean(selected[file.id]))
-  const hasSelected = selectedStates.some(Boolean)
-  const hasUnselected = selectedStates.some(isSelected => !isSelected)
+  const hasSelected = files.some(file => selected[file.id])
+  const hasUnselected = files.some(file => !selected[file.id])
 
-  return hasSelected && hasUnselected ? 1 : !hasUnselected ? 2 : 0
+  return hasSelected && hasUnselected ? 1 : hasSelected ? 2 : 0
 }
 
 const FileListing: FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
   const [selected, setSelected] = useState<SelectedFiles>({})
-  const [totalSelected, setTotalSelected] = useState<SelectionState>(0)
   const [totalGenerating, setTotalGenerating] = useState(false)
   const [folderGenerating, setFolderGenerating] = useState<Record<string, boolean>>({})
 
@@ -93,10 +91,25 @@ const FileListing: FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
 
   const { data, error, size, setSize } = useProtectedSWRInfinite(path)
 
+  // Derived once per fetched page rather than on every selection toggle — normalising and
+  // filtering every child is otherwise repeated on each re-render of the listing.
+  const folderView = useMemo(() => {
+    if (!data?.length || !data[0] || !('folder' in data[0])) return null
+
+    const allFolderChildren = data.flatMap(r => r.folder.value) as OdFolderObject['value']
+    const folderChildren = path === '/' ? allFolderChildren.filter(isNotPersonalVaultItem) : allFolderChildren
+
+    return {
+      folderChildren,
+      files: folderChildren.filter(isSelectableFile),
+      readmeFile: folderChildren.find(c => c.name.toLowerCase() === 'readme.md'),
+    }
+  }, [data, path])
+
   if (error) {
     // If error includes 403 which means the user has not completed initial setup, redirect to OAuth page
     if (error.status === 403) {
-      router.push('/onedrive-vercel-index-plus-oauth/step-1')
+      router.push('/murakumo-oauth/step-1')
       return <div />
     }
 
@@ -114,19 +127,13 @@ const FileListing: FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
     )
   }
 
-  const responses = data.flat()
-
   const isLoadingMore = size > 0 && typeof data[size - 1] === 'undefined'
-  const isEmpty = data?.[0]?.length === 0
-  const isReachingEnd = isEmpty || typeof data[data.length - 1]?.next === 'undefined'
+  const isReachingEnd = typeof data[data.length - 1]?.next === 'undefined'
   const onlyOnePage = typeof data[0].next === 'undefined'
 
-  if ('folder' in responses[0]) {
-    const allFolderChildren = responses.flatMap(r => r.folder.value) as OdFolderObject['value']
-    const folderChildren = path === '/' ? allFolderChildren.filter(isNotPersonalVaultItem) : allFolderChildren
-    const files = folderChildren.filter(isSelectableFile)
-
-    const readmeFile = folderChildren.find(c => c.name.toLowerCase() === 'readme.md')
+  if (folderView) {
+    const { folderChildren, files, readmeFile } = folderView
+    const totalSelected = getSelectionState(files, selected)
 
     const toggleItemSelected = (id: string) => {
       const nextSelected = { ...selected }
@@ -136,21 +143,14 @@ const FileListing: FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
         nextSelected[id] = true
       }
       setSelected(nextSelected)
-      setTotalSelected(getSelectionState(files, nextSelected))
     }
 
     const toggleTotalSelected = () => {
-      if (getSelectionState(files, selected) === 2) {
-        setSelected({})
-        setTotalSelected(0)
-      } else {
-        setSelected(Object.fromEntries(files.map(c => [c.id, true])))
-        setTotalSelected(2)
-      }
+      setSelected(totalSelected === 2 ? {} : Object.fromEntries(files.map(c => [c.id, true])))
     }
 
     const handleSelectedDownload = () => {
-      const folderName = path.substring(path.lastIndexOf('/') + 1)
+      const folderName = basename(path)
       const folder = folderName ? decodeURIComponent(folderName) : undefined
       const selectedFiles = files
         .filter(c => selected[c.id])
@@ -221,7 +221,6 @@ const FileListing: FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
     }
 
     const folderProps = {
-      toast,
       path,
       folderChildren,
       selected,
@@ -237,8 +236,6 @@ const FileListing: FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
 
     return (
       <>
-        <Toaster />
-
         {layout.name === 'Grid' ? <FolderGridLayout {...folderProps} /> : <FolderListLayout {...folderProps} />}
 
         {!onlyOnePage && (
@@ -280,14 +277,14 @@ const FileListing: FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
     )
   }
 
-  if ('file' in responses[0] && responses.length === 1) {
-    const file = responses[0].file as OdFileObject
+  if (data.length === 1 && 'file' in data[0]) {
+    const file = data[0].file as OdFileObject
     return renderFilePreview(file, path)
   }
 
   return (
     <PreviewContainer>
-      <FourOhFour errorMsg={'Cannot preview {{path}}'} />
+      <FourOhFour errorMsg={`Cannot preview ${path}`} />
     </PreviewContainer>
   )
 }

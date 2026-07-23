@@ -5,12 +5,11 @@ import { useEffect } from 'react'
 type RouteProgressBarProps = {
   color?: string
   height?: number
-  nonce?: string
   options?: Parameters<typeof NProgress.configure>[0]
-  showOnShallow?: boolean
-  startPosition?: number
-  stopDelayMs?: number
 }
+
+const START_POSITION = 0.3
+const STOP_DELAY_MS = 200
 
 const getStyle = (color: string, height: number) => `
   #nprogress {
@@ -68,46 +67,31 @@ const getStyle = (color: string, height: number) => `
   }
 `
 
-export default function RouteProgressBar({
-  color = '#29D',
-  height = 3,
-  nonce,
-  options,
-  showOnShallow = true,
-  startPosition = 0.3,
-  stopDelayMs = 200,
-}: RouteProgressBarProps) {
+export default function RouteProgressBar({ color = '#29D', height = 3, options }: RouteProgressBarProps) {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
 
     const endProgress = () => {
       if (timer) clearTimeout(timer)
-      timer = setTimeout(() => NProgress.done(true), stopDelayMs)
+      timer = setTimeout(() => NProgress.done(true), STOP_DELAY_MS)
     }
-    const startProgress = (_: string, { shallow }: { shallow: boolean }) => {
-      if (shallow && !showOnShallow) return
-      NProgress.set(startPosition)
+    const startProgress = () => {
+      NProgress.set(START_POSITION)
       NProgress.start()
-    }
-    const stopProgress = (_: string, { shallow }: { shallow: boolean }) => {
-      if (!shallow || showOnShallow) endProgress()
-    }
-    const errorProgress = (_: Error, __: string, { shallow }: { shallow: boolean }) => {
-      if (!shallow || showOnShallow) endProgress()
     }
 
     if (options) NProgress.configure(options)
     Router.events.on('routeChangeStart', startProgress)
-    Router.events.on('routeChangeComplete', stopProgress)
-    Router.events.on('routeChangeError', errorProgress)
+    Router.events.on('routeChangeComplete', endProgress)
+    Router.events.on('routeChangeError', endProgress)
 
     return () => {
       if (timer) clearTimeout(timer)
       Router.events.off('routeChangeStart', startProgress)
-      Router.events.off('routeChangeComplete', stopProgress)
-      Router.events.off('routeChangeError', errorProgress)
+      Router.events.off('routeChangeComplete', endProgress)
+      Router.events.off('routeChangeError', endProgress)
     }
-  }, [options, showOnShallow, startPosition, stopDelayMs])
+  }, [options])
 
-  return <style nonce={nonce}>{getStyle(color, height)}</style>
+  return <style>{getStyle(color, height)}</style>
 }

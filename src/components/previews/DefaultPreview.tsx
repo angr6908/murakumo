@@ -4,8 +4,7 @@ import { formatModifiedDateTime, humanFileSize } from '../../utils/fileDetails'
 import { FontAwesomeIcon } from '../../utils/fontawesome'
 import { getFileIcon } from '../../utils/getFileIcon'
 
-import DownloadButtonGroup from '../DownloadBtnGtoup'
-import { DownloadBtnContainer, PreviewContainer } from './Containers'
+import { DownloadFooter, PreviewContainer } from './Containers'
 
 const DefaultPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   const details = [
@@ -56,9 +55,7 @@ const DefaultPreview: FC<{ file: OdFileObject }> = ({ file }) => {
           </div>
         </div>
       </PreviewContainer>
-      <DownloadBtnContainer>
-        <DownloadButtonGroup />
-      </DownloadBtnContainer>
+      <DownloadFooter />
     </div>
   )
 }

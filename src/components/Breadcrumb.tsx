@@ -1,5 +1,6 @@
 import type { ParsedUrlQuery } from 'node:querystring'
 import Link from 'next/link'
+import { encodeSegments } from '../utils/drivePath'
 import { FontAwesomeIcon } from '../utils/fontawesome'
 
 const HomeCrumb = () => {
@@ -21,23 +22,24 @@ const Breadcrumb: React.FC<{ query?: ParsedUrlQuery }> = ({ query }) => {
         {path
           .slice()
           .reverse()
-          .map((p: string, i: number) => (
-            <li key={i} className="flex flex-shrink-0 items-center">
-              <FontAwesomeIcon className="h-3 w-3" icon="angle-right" />
-              <Link
-                href={`/${path
-                  .slice(0, path.length - i)
-                  .map(p => encodeURIComponent(p))
-                  .join('/')}`}
-                passHref
-                className={`ml-1 transition-all duration-75 hover:opacity-70 md:ml-3 ${
-                  i === 0 ? 'pointer-events-none opacity-80' : ''
-                }`}
-              >
-                {p}
-              </Link>
-            </li>
-          ))}
+          .map((p: string, i: number) => {
+            // Each crumb targets a distinct prefix of the path, so its href is a stable unique key
+            const href = `/${encodeSegments(path.slice(0, path.length - i))}`
+            return (
+              <li key={href} className="flex flex-shrink-0 items-center">
+                <FontAwesomeIcon className="h-3 w-3" icon="angle-right" />
+                <Link
+                  href={href}
+                  passHref
+                  className={`ml-1 transition-all duration-75 hover:opacity-70 md:ml-3 ${
+                    i === 0 ? 'pointer-events-none opacity-80' : ''
+                  }`}
+                >
+                  {p}
+                </Link>
+              </li>
+            )
+          })}
         <li className="flex-shrink-0 transition-all duration-75 hover:opacity-80">
           <HomeCrumb />
         </li>

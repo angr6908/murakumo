@@ -33,20 +33,8 @@ const FileListItem: FC<{ fileContent: OdFolderChildren }> = ({ fileContent: c })
   )
 }
 
-const FolderListLayout = ({
-  path,
-  folderChildren,
-  selected,
-  toggleItemSelected,
-  totalSelected,
-  toggleTotalSelected,
-  totalGenerating,
-  handleSelectedDownload,
-  folderGenerating,
-  handleSelectedPermalink,
-  handleFolderDownload,
-  toast,
-}: FolderLayoutProps) => {
+const FolderListLayout = (props: FolderLayoutProps) => {
+  const { path, folderChildren, selected, toggleItemSelected } = props
   const hashedToken = getStoredToken(path)
 
   return (
@@ -66,14 +54,9 @@ const FolderListLayout = ({
         </div>
         <div className="hidden font-bold text-gray-600 text-xs uppercase tracking-widest md:block dark:text-gray-300">
           <SelectedFilesControls
+            {...props}
             className="hidden p-1.5 text-gray-700 md:flex dark:text-gray-400"
             selectTitle={'Select files'}
-            totalSelected={totalSelected}
-            toggleTotalSelected={toggleTotalSelected}
-            totalGenerating={totalGenerating}
-            handleSelectedDownload={handleSelectedDownload}
-            handleSelectedPermalink={handleSelectedPermalink}
-            toast={toast}
           />
         </div>
       </div>
@@ -91,12 +74,10 @@ const FolderListLayout = ({
             </Link>
 
             <FolderChildActions
+              {...props}
               child={c}
               itemPath={itemPath}
               hashedToken={hashedToken}
-              folderGenerating={folderGenerating}
-              handleFolderDownload={handleFolderDownload}
-              toast={toast}
               className="hidden p-1.5 text-gray-700 md:flex dark:text-gray-400"
             />
             <div className="hidden p-1.5 text-gray-700 md:flex dark:text-gray-400">

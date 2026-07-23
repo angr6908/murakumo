@@ -1,26 +1,27 @@
+import type { IconProp } from '@fortawesome/fontawesome-svg-core'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useState } from 'react'
-import toast, { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
+// Type-only import — erased at compile time, so the server-only icon set is not bundled here.
+import type { BrandIcons } from '../utils/brandIcons'
 import { FontAwesomeIcon } from '../utils/fontawesome'
 
 import { getPublicRuntimeConfig } from '../utils/publicRuntimeConfig'
 
-const BrandIcon = dynamic(() => import('./BrandIcon'))
 const ClearTokensDialog = dynamic(() => import('./ClearTokensDialog'), { ssr: false })
 const SearchModal = dynamic(() => import('./SearchModal'), { ssr: false })
 
-const Navbar = () => {
+const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
   const router = useRouter()
-  const [os, setOs] = useState('')
+  const [isMac, setIsMac] = useState(false)
   const siteConfig = getPublicRuntimeConfig()
   const protectedRoutes = siteConfig.protectedRoutes
 
   useEffect(() => {
-    const ua = window.navigator.userAgent
-    setOs(ua.includes('Windows') ? 'windows' : ua.includes('Mac OS') ? 'mac' : ua.includes('Linux') ? 'linux' : 'other')
+    setIsMac(window.navigator.userAgent.includes('Mac OS'))
   }, [])
 
   const [tokenPresent, setTokenPresent] = useState(false)
@@ -36,7 +37,7 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleSearchHotkey = (event: KeyboardEvent) => {
-      const modifierPressed = os === 'mac' ? event.metaKey : event.ctrlKey
+      const modifierPressed = isMac ? event.metaKey : event.ctrlKey
       if (!modifierPressed || event.key.toLowerCase() !== 'k') return
 
       event.preventDefault()
@@ -45,7 +46,7 @@ const Navbar = () => {
 
     window.addEventListener('keydown', handleSearchHotkey)
     return () => window.removeEventListener('keydown', handleSearchHotkey)
-  }, [openSearchBox, os])
+  }, [openSearchBox, isMac])
 
   useEffect(() => {
     setTokenPresent(protectedRoutes.some(r => Object.hasOwn(localStorage, r)))
@@ -64,8 +65,6 @@ const Navbar = () => {
 
   return (
     <div className="sticky top-0 z-[100] border-gray-900/10 border-b bg-white bg-opacity-80 backdrop-blur-md dark:border-gray-500/30 dark:bg-gray-900">
-      <Toaster />
-
       {searchMounted && <SearchModal searchOpen={searchOpen} setSearchOpen={setSearchOpen} />}
 
       <div className="mx-auto flex w-full items-center justify-between space-x-4 px-4 py-1">
@@ -86,7 +85,7 @@ const Navbar = () => {
 
             <div className="hidden items-center space-x-1 md:flex">
               <div className="rounded-lg bg-gray-200 px-2 py-1 font-medium text-xs dark:bg-gray-700">
-                {os === 'mac' ? '⌘' : 'Ctrl'}
+                {isMac ? '⌘' : 'Ctrl'}
               </div>
               <div className="rounded-lg bg-gray-200 px-2 py-1 font-medium text-xs dark:bg-gray-700">K</div>
             </div>
@@ -101,7 +100,7 @@ const Navbar = () => {
                 rel="noopener noreferrer"
                 className="flex items-center space-x-2 hover:opacity-80 dark:text-white"
               >
-                <BrandIcon name={l.name} />
+                <FontAwesomeIcon icon={(brandIcons[l.name.toLowerCase()] ?? 'link') as IconProp} />
                 <span className="hidden font-medium text-sm md:inline-block">{l.name}</span>
               </a>
             ))}

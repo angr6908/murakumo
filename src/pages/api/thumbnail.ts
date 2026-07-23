@@ -3,18 +3,15 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import type { OdThumbnail } from '../../types'
 import apiConfig from '../../utils/apiConfig'
 import {
+  driveItemUrl,
   graphHeaders,
   normalisePathQuery,
   requireAccessToken,
   sendDriveError,
   verifyProtectedPath,
 } from '../../utils/apiRoute'
-import { encodePath } from '../../utils/onedriveApi'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const accessToken = await requireAccessToken(res)
-  if (!accessToken) return
-
   const { path = '', size = 'medium', odpt = '' } = req.query
 
   if (odpt === '') res.setHeader('Cache-Control', apiConfig.cacheControlHeader)
@@ -29,14 +26,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return
   }
 
+  const accessToken = await requireAccessToken(res)
+  if (!accessToken) return
+
   const hasAccess = await verifyProtectedPath(res, pathQuery.path, accessToken, odpt as string)
   if (!hasAccess) return
 
-  const requestPath = encodePath(pathQuery.path)
-  const isRoot = requestPath === ''
-
   try {
-    const { data } = await axios.get(`${apiConfig.driveApi}/root${requestPath}${isRoot ? '' : ':'}/thumbnails`, {
+    const { data } = await axios.get(driveItemUrl(pathQuery.path, '/thumbnails'), {
       headers: graphHeaders(accessToken),
     })
 

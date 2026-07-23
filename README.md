@@ -1,4 +1,4 @@
-# murakumo
+# Murakumo
 
 onedrive-vercel-index refreshed with Vercel Blob (Free).
 
@@ -27,7 +27,7 @@ SITE_ICON="/icons/128.png"
 SITE_TITLE="OneDrive"
 BASE_DIRECTORY="/"
 MAX_ITEMS="100"
-SITE_FOOTER='Powered by <a href="https://github.com/angr6908/murakumo" target="_blank" rel="noopener noreferrer">murakumo</a>.'
+SITE_FOOTER='Powered by <a href="https://github.com/angr6908/murakumo" target="_blank" rel="noopener noreferrer">Murakumo</a>.'
 PROTECTED_ROUTES="[]"
 SITE_EMAIL=""
 SITE_LINKS="[]"

@@ -9,6 +9,7 @@ import type { SWRResponse } from 'swr'
 import useSWR from 'swr'
 import useConstant from 'use-constant'
 import type { OdDriveItem, OdSearchResult } from '../types'
+import { encodeSegments } from '../utils/drivePath'
 import { fetcher } from '../utils/fetchWithSWR'
 import { FontAwesomeIcon } from '../utils/fontawesome'
 
@@ -23,12 +24,7 @@ type SearchState = ReturnType<typeof useDriveItemSearch>['results']
 function mapAbsolutePath(path: string): string {
   const siteConfig = getPublicRuntimeConfig()
   const [, absolutePath = ''] = path.split(siteConfig.baseDirectory === '/' ? 'root:' : siteConfig.baseDirectory)
-  return absolutePath
-    ? absolutePath
-        .split('/')
-        .map(p => encodeURIComponent(decodeURIComponent(p)))
-        .join('/')
-    : ''
+  return absolutePath ? encodeSegments(absolutePath.split('/').map(decodeURIComponent)) : ''
 }
 
 function useDriveItemSearch() {

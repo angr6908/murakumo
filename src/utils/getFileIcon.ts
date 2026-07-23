@@ -99,6 +99,10 @@ export function getRawExtension(fileName: string): string {
 export function getExtension(fileName: string): string {
   return getRawExtension(fileName).toLowerCase()
 }
+/** Drop the trailing `.ext` from a file name or path. */
+export function stripExtension(fileName: string): string {
+  return fileName.slice(0, fileName.lastIndexOf('.'))
+}
 
 export function getFileIcon(fileName: string, flags?: { video?: boolean }): [IconPrefix, IconName] {
   const extension = getExtension(fileName)

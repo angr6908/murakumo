@@ -1,15 +1,15 @@
 import type { IconProp } from '@fortawesome/fontawesome-svg-core'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
-import { useRouter } from 'next/router'
-import { type MouseEventHandler, useState } from 'react'
-import toast from 'react-hot-toast'
-import { useClipboard } from 'use-clipboard-copy'
+import { type MouseEventHandler, type ReactNode, useState } from 'react'
 import { FontAwesomeIcon } from '../utils/fontawesome'
 
 import { getBaseUrl } from '../utils/getBaseUrl'
 import { rawFileUrl } from '../utils/odUrls'
-import { getStoredToken } from '../utils/protectedRouteHandler'
-import CustomEmbedLinkMenu from './CustomEmbedLinkMenu'
+import { useCopyLink } from '../utils/useCopyLink'
+import { useCurrentPathToken } from '../utils/useCurrentPathToken'
+
+const CustomEmbedLinkMenu = dynamic(() => import('./CustomEmbedLinkMenu'), { ssr: false })
 
 const colorMap = {
   gray: 'hover:text-gray-600 dark:hover:text-white border-gray-300 dark:border-gray-500',
@@ -55,17 +55,23 @@ export const DownloadButton = ({
   )
 }
 
-const DownloadButtonGroup = () => {
-  const { asPath } = useRouter()
-  const hashedToken = getStoredToken(asPath)
+/** Download / copy link / customise link, plus any preview specific buttons passed as children. */
+const DownloadButtonGroup = ({ children }: { children?: ReactNode }) => {
+  const { asPath, hashedToken } = useCurrentPathToken()
 
-  const clipboard = useClipboard()
+  const copyLink = useCopyLink()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuMounted, setMenuMounted] = useState(false)
   const directUrl = rawFileUrl(asPath, hashedToken)
+
+  const openMenu = () => {
+    setMenuMounted(true)
+    setMenuOpen(true)
+  }
 
   return (
     <>
-      <CustomEmbedLinkMenu menuOpen={menuOpen} setMenuOpen={setMenuOpen} path={asPath} />
+      {menuMounted && <CustomEmbedLinkMenu menuOpen={menuOpen} setMenuOpen={setMenuOpen} path={asPath} />}
       <div className="flex flex-wrap justify-center gap-2">
         <DownloadButton
           onClickCallback={() => window.open(directUrl)}
@@ -75,21 +81,16 @@ const DownloadButtonGroup = () => {
           btnTitle={'Download the file directly through OneDrive'}
         />
         <DownloadButton
-          onClickCallback={() => {
-            clipboard.copy(rawFileUrl(asPath, hashedToken, getBaseUrl()))
-            toast.success('Copied direct link to clipboard.')
-          }}
+          onClickCallback={() =>
+            copyLink(rawFileUrl(asPath, hashedToken, getBaseUrl()), 'Copied direct link to clipboard.')
+          }
           btnColor="pink"
           btnText={'Copy direct link'}
           btnIcon="copy"
           btnTitle={'Copy the permalink to the file to the clipboard'}
         />
-        <DownloadButton
-          onClickCallback={() => setMenuOpen(true)}
-          btnColor="teal"
-          btnText={'Customise link'}
-          btnIcon="pen"
-        />
+        <DownloadButton onClickCallback={openMenu} btnColor="teal" btnText={'Customise link'} btnIcon="pen" />
+        {children}
       </div>
     </>
   )

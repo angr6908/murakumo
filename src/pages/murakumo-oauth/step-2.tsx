@@ -6,35 +6,26 @@ import { LoadingIcon } from '../../components/Loading'
 
 import OAuthCard from '../../components/OAuthCard'
 import PageLayout from '../../components/PageLayout'
-import apiConfig from '../../utils/apiConfig'
+import { getOAuthPublicConfig, type OAuthPublicConfig } from '../../utils/apiConfig'
 import { FontAwesomeIcon } from '../../utils/fontawesome'
 import { extractAuthCodeFromRedirected, generateAuthorisationUrl } from '../../utils/oAuthHandler'
-import { getServerSidePublicConfigProps, type PublicRuntimeConfig } from '../../utils/publicRuntimeConfig'
-
-type OAuthConfig = {
-  clientId: string
-  redirectUri: string
-  authApi: string
-  scope: string
-}
+import { getServerSidePublicConfigProps, type PublicConfigProps } from '../../utils/serverConfig'
 
 export default function OAuthStep2({
   publicConfig,
+  brandIcons,
   oauthConfig,
-}: {
-  publicConfig: PublicRuntimeConfig
-  oauthConfig: OAuthConfig
-}) {
+}: PublicConfigProps & { oauthConfig: OAuthPublicConfig }) {
   const router = useRouter()
 
   const [oAuthRedirectedUrl, setOAuthRedirectedUrl] = useState('')
-  const [authCode, setAuthCode] = useState('')
   const [buttonLoading, setButtonLoading] = useState(false)
 
+  const authCode = extractAuthCodeFromRedirected(oAuthRedirectedUrl, oauthConfig.redirectUri)
   const oAuthUrl = generateAuthorisationUrl(oauthConfig)
 
   return (
-    <PageLayout title={`OAuth Step 2 - ${publicConfig.title}`}>
+    <PageLayout title={`OAuth Step 2 - ${publicConfig.title}`} brandIcons={brandIcons}>
       <OAuthCard
         imageSrc="/images/fabulous-come-back-later.png"
         imageAlt="fabulous come back later"
@@ -79,15 +70,12 @@ export default function OAuthStep2({
           type="text"
           placeholder="http://localhost/?code=M.R3_BAY.c0..."
           value={oAuthRedirectedUrl}
-          onChange={e => {
-            setOAuthRedirectedUrl(e.target.value)
-            setAuthCode(extractAuthCodeFromRedirected(e.target.value, oauthConfig.redirectUri))
-          }}
+          onChange={e => setOAuthRedirectedUrl(e.target.value)}
         />
 
         <p className="py-1">The authorisation code extracted is:</p>
         <p className="my-2 overflow-hidden truncate rounded border border-gray-400/20 bg-gray-50 p-2 font-mono text-sm opacity-80 dark:bg-gray-800">
-          {authCode ?? <span className="animate-pulse">Waiting for code...</span>}
+          {authCode || <span className="animate-pulse">Waiting for code...</span>}
         </p>
 
         <p>
@@ -102,7 +90,7 @@ export default function OAuthStep2({
             disabled={authCode === ''}
             onClick={() => {
               setButtonLoading(true)
-              router.push({ pathname: '/onedrive-vercel-index-plus-oauth/step-3', query: { authCode } })
+              router.push({ pathname: '/murakumo-oauth/step-3', query: { authCode } })
             }}
           >
             {buttonLoading ? (
@@ -121,18 +109,6 @@ export default function OAuthStep2({
   )
 }
 
-export const getServerSideProps: GetServerSideProps = async () => {
-  const baseProps = getServerSidePublicConfigProps()
-
-  return {
-    props: {
-      ...baseProps.props,
-      oauthConfig: {
-        clientId: apiConfig.clientId,
-        redirectUri: apiConfig.redirectUri,
-        authApi: apiConfig.authApi,
-        scope: apiConfig.scope,
-      },
-    },
-  }
-}
+export const getServerSideProps: GetServerSideProps = async () => ({
+  props: { ...getServerSidePublicConfigProps().props, oauthConfig: getOAuthPublicConfig() },
+})

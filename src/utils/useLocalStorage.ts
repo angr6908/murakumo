@@ -1,17 +1,21 @@
-import { type Dispatch, type SetStateAction, useEffect, useState } from 'react'
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useRef, useState } from 'react'
 
 type SetValue<T> = Dispatch<SetStateAction<T>>
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
-  const readValue = (): T => {
-    if (typeof window === 'undefined') return initialValue
+  // Held in a ref so a caller passing a fresh object/array literal each render
+  // does not invalidate readValue and re-run the effects below.
+  const initialValueRef = useRef(initialValue)
+
+  const readValue = useCallback((): T => {
+    if (typeof window === 'undefined') return initialValueRef.current
     try {
       const item = window.localStorage.getItem(key)
-      return item ? (JSON.parse(item) as T) : initialValue
+      return item ? (JSON.parse(item) as T) : initialValueRef.current
     } catch {
-      return initialValue
+      return initialValueRef.current
     }
-  }
+  }, [key])
 
   const [storedValue, setStoredValue] = useState<T>(readValue)
 
@@ -27,8 +31,7 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
 
   useEffect(() => {
     setStoredValue(readValue())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [readValue])
 
   useEffect(() => {
     const handler = () => setStoredValue(readValue())
@@ -38,8 +41,7 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
       window.removeEventListener('storage', handler)
       window.removeEventListener('local-storage', handler)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [readValue])
 
   return [storedValue, setValue]
 }

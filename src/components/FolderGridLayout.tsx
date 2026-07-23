@@ -28,7 +28,7 @@ const GridItem = ({ c, path }: { c: OdFolderChildren; path: string }) => {
     <div className="space-y-2">
       <div className="h-32 overflow-hidden rounded border border-gray-900/10 dark:border-gray-500/30">
         {thumbnail && !brokenThumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element
+          // biome-ignore lint/performance/noImgElement: images.unoptimized is set in next.config.ts, and the onError fallback below needs a plain img
           <img
             className="h-full w-full object-cover object-top"
             src={thumbnail}
@@ -60,20 +60,8 @@ const GridItem = ({ c, path }: { c: OdFolderChildren; path: string }) => {
   )
 }
 
-const FolderGridLayout = ({
-  path,
-  folderChildren,
-  selected,
-  toggleItemSelected,
-  totalSelected,
-  toggleTotalSelected,
-  totalGenerating,
-  handleSelectedDownload,
-  folderGenerating,
-  handleSelectedPermalink,
-  handleFolderDownload,
-  toast,
-}: FolderLayoutProps) => {
+const FolderGridLayout = (props: FolderLayoutProps) => {
+  const { path, folderChildren, selected, toggleItemSelected } = props
   const hashedToken = getStoredToken(path)
   const baseUrl = getBaseUrl()
   const itemCount = folderChildren.length
@@ -83,14 +71,9 @@ const FolderGridLayout = ({
       <div className="flex items-center border-gray-900/10 border-b px-3 font-bold text-gray-600 text-xs uppercase tracking-widest dark:border-gray-500/30 dark:text-gray-400">
         <div className="flex-1">{`${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}</div>
         <SelectedFilesControls
+          {...props}
           className="flex p-1.5 text-gray-700 dark:text-gray-400"
           selectTitle={'Select all files'}
-          totalSelected={totalSelected}
-          toggleTotalSelected={toggleTotalSelected}
-          totalGenerating={totalGenerating}
-          handleSelectedDownload={handleSelectedDownload}
-          handleSelectedPermalink={handleSelectedPermalink}
-          toast={toast}
         />
       </div>
 
@@ -104,12 +87,10 @@ const FolderGridLayout = ({
             >
               <div className="absolute top-0 right-0 z-10 m-1 rounded bg-white/50 py-0.5 opacity-0 transition-all duration-100 group-hover:opacity-100 dark:bg-gray-900/50">
                 <FolderChildActions
+                  {...props}
                   child={c}
                   itemPath={itemPath}
                   hashedToken={hashedToken}
-                  folderGenerating={folderGenerating}
-                  handleFolderDownload={handleFolderDownload}
-                  toast={toast}
                   className=""
                   downloadBaseUrl={baseUrl}
                 />

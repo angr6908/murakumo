@@ -1,9 +1,10 @@
-import { type PublicRuntimeConfig, readSiteConfig } from './siteConfig'
+import siteConfig, { type PublicRuntimeConfig } from './siteConfig'
 
 export type { PublicRuntimeConfig, PublicSiteLink } from './siteConfig'
 
+// Site config is derived from env vars, which are fixed for the process lifetime.
 export function readPublicRuntimeConfig(): PublicRuntimeConfig {
-  return readSiteConfig()
+  return siteConfig
 }
 
 declare global {
@@ -18,10 +19,8 @@ export function getPublicRuntimeConfig(): PublicRuntimeConfig {
     : readPublicRuntimeConfig()
 }
 
-export function serializePublicRuntimeConfig(): string {
-  return JSON.stringify(readPublicRuntimeConfig()).replace(/</g, '\\u003c')
-}
+const serializedPublicRuntimeConfig = JSON.stringify(siteConfig).replace(/</g, '\\u003c')
 
-export function getServerSidePublicConfigProps() {
-  return { props: { publicConfig: readPublicRuntimeConfig() } }
+export function serializePublicRuntimeConfig(): string {
+  return serializedPublicRuntimeConfig
 }

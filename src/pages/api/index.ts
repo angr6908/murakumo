@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 
 import apiConfig from '../../utils/apiConfig'
 import {
+  driveItemUrl,
   graphHeaders,
   nextPageToken,
   normalisePathQuery,
@@ -62,10 +63,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const hasAccess = await verifyProtectedPath(res, cleanPath, accessToken, req.headers['od-protected-token'] as string)
   if (!hasAccess) return
 
-  const requestPath = encodePath(cleanPath)
-  const requestUrl = `${apiConfig.driveApi}/root${requestPath}`
-  const isRoot = requestPath === ''
-  const childrenUrl = `${requestUrl}${isRoot ? '' : ':'}/children`
+  const isRoot = encodePath(cleanPath) === ''
+  const requestUrl = driveItemUrl(cleanPath)
+  const childrenUrl = driveItemUrl(cleanPath, '/children')
 
   const fetchFolderData = async () => {
     const { data } = await axios.get(childrenUrl, {

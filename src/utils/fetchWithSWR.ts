@@ -3,6 +3,7 @@ import useSWRInfinite from 'swr/infinite'
 
 import type { OdAPIResponse } from '../types'
 
+import { driveListUrl } from './odUrls'
 import { getStoredToken } from './protectedRouteHandler'
 
 const immutableOptions = {
@@ -26,8 +27,7 @@ export function useProtectedSWRInfinite(path: string = '') {
 
   function getNextKey(pageIndex: number, previousPageData: OdAPIResponse): (string | null)[] | null {
     if (previousPageData && !previousPageData.folder) return null
-    if (pageIndex === 0) return [`/api/?path=${path}`, hashedToken]
-    return [`/api/?path=${path}&next=${previousPageData.next}`, hashedToken]
+    return [driveListUrl(path, pageIndex === 0 ? undefined : previousPageData.next), hashedToken]
   }
 
   return useSWRInfinite(getNextKey, fetcher, immutableOptions)

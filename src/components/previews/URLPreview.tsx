@@ -1,11 +1,7 @@
-import { useRouter } from 'next/router'
 import type { FC } from 'react'
-import useFileContent from '../../utils/fetchOnMount'
-import { rawFileUrl } from '../../utils/odUrls'
 import { DownloadButton } from '../DownloadBtnGtoup'
-import FourOhFour from '../FourOhFour'
-import Loading from '../Loading'
 import { DownloadBtnContainer, PreviewContainer } from './Containers'
+import FileContentPreview from './FileContentPreview'
 
 const parseDotUrl = (content: string): string | undefined => {
   return content
@@ -14,52 +10,31 @@ const parseDotUrl = (content: string): string | undefined => {
     ?.split('=')[1]
 }
 
-const URLPreview: FC<{ file: any }> = () => {
-  const { asPath } = useRouter()
+const URLPreview: FC = () => (
+  <FileContentPreview>
+    {content => {
+      const url = parseDotUrl(content) ?? ''
 
-  const { response: content, error, validating } = useFileContent(rawFileUrl(asPath, null, '', true), asPath)
-  if (error) {
-    return (
-      <PreviewContainer>
-        <FourOhFour errorMsg={error} />
-      </PreviewContainer>
-    )
-  }
-
-  if (validating) {
-    return (
-      <PreviewContainer>
-        <Loading loadingText={'Loading file content...'} />
-      </PreviewContainer>
-    )
-  }
-
-  if (!content) {
-    return (
-      <PreviewContainer>
-        <FourOhFour errorMsg={'File is empty.'} />
-      </PreviewContainer>
-    )
-  }
-
-  return (
-    <div>
-      <PreviewContainer>
-        <pre className="overflow-x-scroll p-0 text-sm md:p-3">{content}</pre>
-      </PreviewContainer>
-      <DownloadBtnContainer>
-        <div className="flex justify-center">
-          <DownloadButton
-            onClickCallback={() => window.open(parseDotUrl(content) ?? '')}
-            btnColor="blue"
-            btnText={'Open URL'}
-            btnIcon="external-link-alt"
-            btnTitle={'Open URL{{url}}'}
-          />
+      return (
+        <div>
+          <PreviewContainer>
+            <pre className="overflow-x-scroll p-0 text-sm md:p-3">{content}</pre>
+          </PreviewContainer>
+          <DownloadBtnContainer>
+            <div className="flex justify-center">
+              <DownloadButton
+                onClickCallback={() => window.open(url)}
+                btnColor="blue"
+                btnText={'Open URL'}
+                btnIcon="external-link-alt"
+                btnTitle={`Open ${url}`}
+              />
+            </div>
+          </DownloadBtnContainer>
         </div>
-      </DownloadBtnContainer>
-    </div>
-  )
-}
+      )
+    }}
+  </FileContentPreview>
+)
 
 export default URLPreview
