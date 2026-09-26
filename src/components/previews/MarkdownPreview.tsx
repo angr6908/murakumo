@@ -59,7 +59,6 @@ const MarkdownPreview: FC<{
       img: (props: any) => {
         const { alt, src, title, width, height, style } = props
         return (
-          // biome-ignore lint/performance/noImgElement: src comes from arbitrary user markdown, so it cannot be constrained to next/image
           <img
             alt={alt}
             src={isUrlAbsolute(src as string) ? src : rawFileUrl(`${parentPath}/${src}`, hashedToken)}

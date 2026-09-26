@@ -31,9 +31,6 @@ export default {
           850: '#222226',
         },
       },
-      animation: {
-        'spin-slow': 'spin 5s linear infinite',
-      },
     },
   },
 } satisfies Config

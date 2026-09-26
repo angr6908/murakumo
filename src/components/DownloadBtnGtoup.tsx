@@ -56,7 +56,13 @@ export const DownloadButton = ({
 }
 
 /** Download / copy link / customise link, plus any preview specific buttons passed as children. */
-const DownloadButtonGroup = ({ children }: { children?: ReactNode }) => {
+const DownloadButtonGroup = ({
+  children,
+  className = 'justify-center',
+}: {
+  children?: ReactNode
+  className?: string
+}) => {
   const { asPath, hashedToken } = useCurrentPathToken()
 
   const copyLink = useCopyLink()
@@ -72,7 +78,7 @@ const DownloadButtonGroup = ({ children }: { children?: ReactNode }) => {
   return (
     <>
       {menuMounted && <CustomEmbedLinkMenu menuOpen={menuOpen} setMenuOpen={setMenuOpen} path={asPath} />}
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className={`flex flex-wrap gap-2 ${className}`}>
         <DownloadButton
           onClickCallback={() => window.open(directUrl)}
           btnColor="blue"

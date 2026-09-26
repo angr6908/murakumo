@@ -28,7 +28,6 @@ const GridItem = memo(function GridItem({ c, path }: { c: OdFolderChildren; path
     <div className="space-y-2">
       <div className="h-32 overflow-hidden rounded border border-gray-900/10 dark:border-gray-500/30">
         {thumbnail && !brokenThumbnail ? (
-          // biome-ignore lint/performance/noImgElement: images.unoptimized is set in next.config.ts, and the onError fallback below needs a plain img
           <img
             className="h-full w-full object-cover object-top"
             src={thumbnail}

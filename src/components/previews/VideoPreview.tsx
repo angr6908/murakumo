@@ -1,67 +1,84 @@
-import dynamic from 'next/dynamic'
-import { type FC, useEffect } from 'react'
+import { Video, VideoPlayer, VideoSkin } from '@videojs/react/video'
+import { type FC, useEffect, useRef, useState } from 'react'
 import { useAsync } from 'react-async-hook'
 import type { OdFileObject } from '../../types'
 
+import { formatModifiedDateTime, humanFileSize } from '../../utils/fileDetails'
 import { getBaseUrl } from '../../utils/getBaseUrl'
 import { getExtension, stripExtension } from '../../utils/getFileIcon'
 import { directFileUrl, rawFileUrl, thumbnailUrl } from '../../utils/odUrls'
 import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
-import { DownloadButton } from '../DownloadBtnGtoup'
+import DownloadButtonGroup, { DownloadButton } from '../DownloadBtnGtoup'
 import FourOhFour from '../FourOhFour'
 import Loading from '../Loading'
-import { DownloadFooter, PreviewContainer } from './Containers'
+import { PreviewContainer } from './Containers'
 
-import 'plyr-react/plyr.css'
+import '@videojs/react/video/skin.css'
 
-const Plyr = dynamic(() => import('plyr-react').then(mod => mod.Plyr), {
-  ssr: false,
-})
+const maxPlayerHeight = 'max(15rem, 100svh - 8rem)'
 
-const VideoPlayer: FC<{
+const VideoPlayerView: FC<{
   videoName: string
   videoUrl: string
-  width?: number
-  height?: number
+  ratio: string
   thumbnail: string
   subtitle: string
   isFlv: boolean
   mpegts: any
-}> = ({ videoName, videoUrl, width, height, thumbnail, subtitle, isFlv, mpegts }) => {
+  onResize: (size: { width: number; height: number }) => void
+}> = ({ videoName, videoUrl, ratio, thumbnail, subtitle, isFlv, mpegts, onResize }) => {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [subtitleUrl, setSubtitleUrl] = useState<string>()
+
   useEffect(() => {
-    fetch(subtitle)
-      .then(resp => resp.blob())
+    const controller = new AbortController()
+    let objectUrl: string | undefined
+    fetch(subtitle, { signal: controller.signal })
+      .then(resp => (resp.ok ? resp.blob() : Promise.reject()))
       .then(blob => {
-        const track = document.querySelector('track')
-        track?.setAttribute('src', URL.createObjectURL(blob))
+        objectUrl = URL.createObjectURL(blob)
+        setSubtitleUrl(objectUrl)
       })
       .catch(() => {})
-
-    if (isFlv) {
-      const video = document.getElementById('plyr')
-      const flv = mpegts.createPlayer({ url: videoUrl, type: 'flv' })
-      flv.attachMediaElement(video)
-      flv.load()
+    return () => {
+      controller.abort()
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      setSubtitleUrl(undefined)
     }
-  }, [videoUrl, isFlv, mpegts, subtitle])
+  }, [subtitle])
 
-  const plyrSource: any = {
-    type: 'video',
-    title: videoName,
-    poster: thumbnail,
-    tracks: [{ kind: 'captions', label: videoName, src: '', default: true }],
-    sources: isFlv ? [] : [{ src: videoUrl }],
-  }
-  const plyrOptions = {
-    ratio: `${width ?? 16}:${height ?? 9}`,
-    fullscreen: { iosNative: true },
-  }
+  useEffect(() => {
+    if (!isFlv || !mpegts || !videoRef.current) return
+    const flv = mpegts.createPlayer({ url: videoUrl, type: 'flv' })
+    flv.attachMediaElement(videoRef.current)
+    flv.load()
+    return () => flv.destroy()
+  }, [videoUrl, isFlv, mpegts])
 
-  return <Plyr id="plyr" source={plyrSource} options={plyrOptions} />
+  return (
+    <VideoPlayer poster={thumbnail}>
+      <VideoSkin
+        className="w-full [--media-border-color:transparent] [--media-border-radius:0] sm:[&:not(:fullscreen)]:[clip-path:inset(0_round_0.75rem)]"
+        style={{ aspectRatio: ratio }}
+      >
+        <Video
+          ref={videoRef}
+          src={isFlv ? undefined : videoUrl}
+          playsInline
+          onLoadedMetadata={({ currentTarget: { videoWidth, videoHeight } }) => {
+            if (videoWidth && videoHeight) onResize({ width: videoWidth, height: videoHeight })
+          }}
+        >
+          {subtitleUrl && <track kind="captions" label={videoName} src={subtitleUrl} default />}
+        </Video>
+      </VideoSkin>
+    </VideoPlayer>
+  )
 }
 
 const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   const { asPath, hashedToken } = useCurrentPathToken()
+  const [measured, setMeasured] = useState<{ url: string; width: number; height: number }>()
 
   const thumbnail = thumbnailUrl(asPath, 'large', hashedToken)
   const subtitle = rawFileUrl(`${stripExtension(asPath)}.vtt`, hashedToken)
@@ -79,42 +96,61 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
     }
   }, [isFlv])
 
-  return (
-    <>
-      <PreviewContainer>
-        {error ? (
-          <FourOhFour errorMsg={error.message} />
-        ) : loading && isFlv ? (
-          <Loading loadingText={'Loading FLV extension...'} />
-        ) : (
-          <VideoPlayer
-            videoName={file.name}
-            videoUrl={playbackUrl}
-            width={file.video?.width}
-            height={file.video?.height}
-            thumbnail={thumbnail}
-            subtitle={subtitle}
-            isFlv={isFlv}
-            mpegts={mpegts}
-          />
-        )}
-      </PreviewContainer>
+  const size =
+    measured?.url === playbackUrl ? measured : { width: file.video?.width || 16, height: file.video?.height || 9 }
+  const ratio = `${size.width} / ${size.height}`
+  const columnWidth = size.height >= size.width ? `min(100%, calc(${maxPlayerHeight} * ${ratio}))` : undefined
+  const details = [
+    getExtension(file.name).toUpperCase(),
+    file.video?.width && file.video?.height ? `${file.video.width}×${file.video.height}` : undefined,
+    humanFileSize(file.size),
+    formatModifiedDateTime(file.lastModifiedDateTime),
+  ].filter(Boolean)
 
-      <DownloadFooter>
-        {[
-          { text: 'IINA', img: '/players/iina.png', url: `iina://weblink?url=${getBaseUrl()}${videoUrl}` },
-          { text: 'VLC', img: '/players/vlc.png', url: `vlc://${getBaseUrl()}${videoUrl}` },
-          { text: 'PotPlayer', img: '/players/potplayer.png', url: `potplayer://${getBaseUrl()}${videoUrl}` },
-          {
-            text: 'nPlayer',
-            img: '/players/nplayer.png',
-            url: `nplayer-http://${window.location.hostname}${videoUrl}`,
-          },
-        ].map(({ text, img, url }) => (
-          <DownloadButton key={text} onClickCallback={() => window.open(url)} btnText={text} btnImage={img} />
-        ))}
-      </DownloadFooter>
-    </>
+  const externalPlayers = [
+    { text: 'IINA', img: '/players/iina.png', url: `iina://weblink?url=${getBaseUrl()}${videoUrl}` },
+    { text: 'VLC', img: '/players/vlc.png', url: `vlc://${getBaseUrl()}${videoUrl}` },
+    { text: 'PotPlayer', img: '/players/potplayer.png', url: `potplayer://${getBaseUrl()}${videoUrl}` },
+    { text: 'nPlayer', img: '/players/nplayer.png', url: `nplayer-http://${window.location.hostname}${videoUrl}` },
+  ]
+
+  return (
+    <div className="mx-auto w-full" style={{ width: columnWidth }}>
+      {error ? (
+        <PreviewContainer>
+          <FourOhFour errorMsg={error.message} />
+        </PreviewContainer>
+      ) : loading && isFlv ? (
+        <PreviewContainer>
+          <Loading loadingText={'Loading FLV extension...'} />
+        </PreviewContainer>
+      ) : (
+        <VideoPlayerView
+          videoName={file.name}
+          videoUrl={playbackUrl}
+          ratio={ratio}
+          thumbnail={thumbnail}
+          subtitle={subtitle}
+          isFlv={isFlv}
+          mpegts={mpegts}
+          onResize={({ width, height }) => setMeasured({ url: playbackUrl, width, height })}
+        />
+      )}
+
+      <div className="mt-4 space-y-4 px-4 sm:px-0">
+        <div>
+          <h1 className="break-words font-semibold text-gray-900 text-lg sm:text-xl dark:text-gray-100">
+            {stripExtension(file.name)}
+          </h1>
+          <p className="mt-1 text-gray-500 text-sm dark:text-gray-400">{details.join(' · ')}</p>
+        </div>
+        <DownloadButtonGroup className="justify-start">
+          {externalPlayers.map(({ text, img, url }) => (
+            <DownloadButton key={text} onClickCallback={() => window.open(url)} btnText={text} btnImage={img} />
+          ))}
+        </DownloadButtonGroup>
+      </div>
+    </div>
   )
 }
 

@@ -1,109 +1,68 @@
-import { type FC, useEffect, useRef, useState } from 'react'
+import { selectPlayback, usePlayer } from '@videojs/react'
+import { Audio, AudioPlayer, AudioSkin } from '@videojs/react/audio'
+import Image from 'next/image'
+import { type FC, useState } from 'react'
 
-import ReactAudioPlayer from 'react-audio-player'
 import type { OdFileObject } from '../../types'
-import { formatModifiedDateTime } from '../../utils/fileDetails'
+import { formatModifiedDateTime, humanFileSize } from '../../utils/fileDetails'
 import { FontAwesomeIcon } from '../../utils/fontawesome'
+import { getExtension, stripExtension } from '../../utils/getFileIcon'
 import { directFileUrl, thumbnailUrl } from '../../utils/odUrls'
 import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
+import DownloadButtonGroup from '../DownloadBtnGtoup'
 import { LoadingIcon } from '../Loading'
-import { DownloadFooter, PreviewContainer } from './Containers'
 
-enum PlayerState {
-  Loading,
-  Ready,
-  Playing,
-  Paused,
+import '@videojs/react/audio/skin.css'
+
+const Cover: FC<{ src: string; alt: string }> = ({ src, alt }) => {
+  const playback = usePlayer(selectPlayback)
+  const [broken, setBroken] = useState(false)
+
+  return (
+    <div className="relative size-48 shrink-0 overflow-hidden rounded-2xl bg-gray-200 shadow-lg sm:size-56 dark:bg-gray-700">
+      {broken ? (
+        <div className="flex size-full items-center justify-center text-gray-400 dark:text-gray-500">
+          <FontAwesomeIcon icon="music" size="3x" />
+        </div>
+      ) : (
+        <Image className="object-cover" src={src} alt={alt} fill sizes="224px" onError={() => setBroken(true)} />
+      )}
+      {playback?.waiting && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-gray-900/60">
+          <LoadingIcon className="size-6 animate-spin" />
+        </div>
+      )}
+    </div>
+  )
 }
 
 const AudioPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   const { asPath, hashedToken } = useCurrentPathToken()
-
-  const rapRef = useRef<ReactAudioPlayer>(null)
-  const [playerStatus, setPlayerStatus] = useState(PlayerState.Loading)
-  const [playerVolume, setPlayerVolume] = useState(1)
-
-  // Render audio thumbnail, and also check for broken thumbnails
-  const thumbnail = thumbnailUrl(asPath, 'medium', hashedToken)
-  const [brokenThumbnail, setBrokenThumbnail] = useState(false)
-
-  useEffect(() => {
-    // Manually get the HTML audio element and set onplaying event.
-    // - As the default event callbacks provided by the React component does not guarantee playing state to be set
-    // - properly when the user seeks through the timeline or the audio is buffered.
-    const rap = rapRef.current?.audioEl.current
-    if (rap) {
-      rap.oncanplay = () => setPlayerStatus(PlayerState.Ready)
-      rap.onended = () => setPlayerStatus(PlayerState.Paused)
-      rap.onpause = () => setPlayerStatus(PlayerState.Paused)
-      rap.onplay = () => setPlayerStatus(PlayerState.Playing)
-      rap.onplaying = () => setPlayerStatus(PlayerState.Playing)
-      rap.onseeking = () => setPlayerStatus(PlayerState.Loading)
-      rap.onwaiting = () => setPlayerStatus(PlayerState.Loading)
-      rap.onerror = () => setPlayerStatus(PlayerState.Paused)
-      rap.onvolumechange = () => setPlayerVolume(rap.volume)
-    }
-  }, [])
+  const thumbnail = thumbnailUrl(asPath, 'large', hashedToken)
+  const details = [
+    getExtension(file.name).toUpperCase(),
+    humanFileSize(file.size),
+    formatModifiedDateTime(file.lastModifiedDateTime),
+  ]
 
   return (
-    <>
-      <PreviewContainer>
-        <div className="flex flex-col space-y-4 md:flex-row md:space-x-4">
-          <div className="relative flex aspect-square w-full items-center justify-center rounded bg-gray-100 transition-all duration-75 md:w-48 dark:bg-gray-700">
-            <div
-              className={`absolute z-20 flex h-full w-full items-center justify-center transition-all duration-300 ${
-                playerStatus === PlayerState.Loading
-                  ? 'bg-white opacity-80 dark:bg-gray-800'
-                  : 'bg-transparent opacity-0'
-              }`}
-            >
-              <LoadingIcon className="z-10 inline-block h-5 w-5 animate-spin" />
-            </div>
-
-            {!brokenThumbnail ? (
-              <div className="absolute m-4 aspect-square rounded-full shadow-lg">
-                {/* biome-ignore lint/performance/noImgElement: images.unoptimized is set in next.config.ts, and the onError fallback below needs a plain img */}
-                <img
-                  className={`h-full w-full rounded-full object-cover object-top ${
-                    playerStatus === PlayerState.Playing ? 'animate-spin-slow' : ''
-                  }`}
-                  src={thumbnail}
-                  alt={file.name}
-                  decoding="async"
-                  onError={() => setBrokenThumbnail(true)}
-                />
-              </div>
-            ) : (
-              <FontAwesomeIcon
-                className={`z-10 h-5 w-5 ${playerStatus === PlayerState.Playing ? 'animate-spin' : ''}`}
-                icon="music"
-                size="2x"
-              />
-            )}
+    <AudioPlayer title={file.name}>
+      <div className="flex flex-col items-center gap-6 px-4 pt-2 pb-6 sm:flex-row sm:gap-8 sm:px-0">
+        <Cover key={thumbnail} src={thumbnail} alt={file.name} />
+        <div className="flex w-full min-w-0 flex-col gap-5 text-center sm:text-left">
+          <div>
+            <h1 className="break-words font-semibold text-gray-900 text-xl sm:text-2xl dark:text-gray-100">
+              {stripExtension(file.name)}
+            </h1>
+            <p className="mt-1 text-gray-500 text-sm dark:text-gray-400">{details.join(' · ')}</p>
           </div>
-
-          <div className="flex w-full flex-col justify-between">
-            <div>
-              <div className="mb-2 font-medium">{file.name}</div>
-              <div className="mb-4 text-gray-500 text-sm">
-                {`Last modified: ${formatModifiedDateTime(file.lastModifiedDateTime)}`}
-              </div>
-            </div>
-
-            <ReactAudioPlayer
-              className="h-11 w-full"
-              src={directFileUrl(file, asPath, hashedToken)}
-              ref={rapRef}
-              controls
-              preload="auto"
-              volume={playerVolume}
-            />
-          </div>
+          <AudioSkin className="w-full [--media-border-color:transparent] [color-scheme:light_dark]">
+            <Audio src={directFileUrl(file, asPath, hashedToken)} preload="metadata" />
+          </AudioSkin>
+          <DownloadButtonGroup className="justify-center sm:justify-start" />
         </div>
-      </PreviewContainer>
-
-      <DownloadFooter />
-    </>
+      </div>
+    </AudioPlayer>
   )
 }
 
