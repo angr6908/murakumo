@@ -14,6 +14,10 @@ export function rawFileUrl(path: string, token?: string | null, baseUrl = '', pr
   return appendProtectedToken(`${baseUrl}/api/raw/?path=${path}${proxy ? '&proxy=true' : ''}`, token)
 }
 
+export function tracksUrl(path: string, token?: string | null, version?: string): string {
+  return appendProtectedToken(`/api/tracks/?path=${path}${version ? `&v=${encodeURIComponent(version)}` : ''}`, token)
+}
+
 export function thumbnailUrl(path: string, size: ThumbnailSize, token?: string | null): string {
   return appendProtectedToken(`/api/thumbnail/?path=${path}&size=${size}`, token)
 }

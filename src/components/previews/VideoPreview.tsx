@@ -1,12 +1,15 @@
 import { Video, VideoPlayer, VideoSkin } from '@videojs/react/video'
-import { type FC, useEffect, useRef, useState } from 'react'
+import { type FC, useCallback, useEffect, useRef, useState } from 'react'
 import { useAsync } from 'react-async-hook'
 import type { OdFileObject } from '../../types'
 
+import { labelAudioTracks } from '../../utils/audioTrackNames'
 import { formatModifiedDateTime, humanFileSize } from '../../utils/fileDetails'
 import { getBaseUrl } from '../../utils/getBaseUrl'
 import { getExtension, stripExtension } from '../../utils/getFileIcon'
-import { directFileUrl, rawFileUrl, thumbnailUrl } from '../../utils/odUrls'
+import type { Mp4Probe } from '../../utils/mp4'
+import { playMp4WithMse } from '../../utils/mseMp4Player'
+import { directFileUrl, rawFileUrl, thumbnailUrl, tracksUrl } from '../../utils/odUrls'
 import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
 import DownloadButtonGroup, { DownloadButton } from '../DownloadBtnGtoup'
 import FourOhFour from '../FourOhFour'
@@ -16,6 +19,11 @@ import { PreviewContainer } from './Containers'
 import '@videojs/react/video/skin.css'
 
 const maxPlayerHeight = 'max(15rem, 100svh - 8rem)'
+const probeTimeout = 2500
+const mp4Extensions = new Set(['mp4', 'm4v', 'mov'])
+
+const hasNativeAudioTracks = () => typeof HTMLMediaElement !== 'undefined' && 'audioTracks' in HTMLMediaElement.prototype
+const hasMediaSource = () => typeof MediaSource !== 'undefined'
 
 const VideoPlayerView: FC<{
   videoName: string
@@ -25,10 +33,35 @@ const VideoPlayerView: FC<{
   subtitle: string
   isFlv: boolean
   mpegts: any
+  probeUrl?: string
+  refreshUrl: string
   onResize: (size: { width: number; height: number }) => void
-}> = ({ videoName, videoUrl, ratio, thumbnail, subtitle, isFlv, mpegts, onResize }) => {
+}> = ({ videoName, videoUrl, ratio, thumbnail, subtitle, isFlv, mpegts, probeUrl, refreshUrl, onResize }) => {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const audioLabelsRef = useRef<ReturnType<typeof labelAudioTracks>>(undefined)
+  const wasWaitingRef = useRef(false)
   const [subtitleUrl, setSubtitleUrl] = useState<string>()
+  const [probe, setProbe] = useState<{ url: string; value: Mp4Probe | null }>()
+  const [mseFailedUrl, setMseFailedUrl] = useState<string>()
+
+  const canUseMse = hasMediaSource() && !hasNativeAudioTracks()
+  const probeResult = probe && probe.url === probeUrl ? probe.value : undefined
+  const waiting = Boolean(probeUrl && canUseMse && !isFlv && probeResult === undefined)
+  const videoCodec = probeResult?.tracks.find(track => track.type === 'vide')?.codec
+  const useMse = Boolean(
+    canUseMse &&
+      !isFlv &&
+      probeResult?.moov &&
+      !probeResult.fragmented &&
+      probeResult.tracks.filter(track => track.type === 'soun').length > 1 &&
+      mseFailedUrl !== videoUrl &&
+      (!videoCodec || MediaSource.isTypeSupported(`video/mp4; codecs="${videoCodec}"`)),
+  )
+
+  const attachVideo = useCallback((video: HTMLVideoElement | null) => {
+    videoRef.current = video
+    audioLabelsRef.current = video ? labelAudioTracks(video) : undefined
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -55,6 +88,72 @@ const VideoPlayerView: FC<{
     return () => flv.destroy()
   }, [videoUrl, isFlv, mpegts])
 
+  useEffect(() => {
+    if (!probeUrl) return
+    const controller = new AbortController()
+    let settled = false
+    const settle = (value: Mp4Probe | null) => {
+      if (settled) return
+      settled = true
+      setProbe({ url: probeUrl, value })
+    }
+    const timer = hasNativeAudioTracks() ? undefined : setTimeout(() => settle(null), probeTimeout)
+    fetch(probeUrl, { signal: controller.signal })
+      .then(resp => (resp.ok ? resp.json() : null))
+      .then(value => settle(value?.tracks ? value : null))
+      .catch(() => settle(null))
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [probeUrl])
+
+  useEffect(() => {
+    if (probeResult?.tracks) audioLabelsRef.current?.setNames(probeResult.tracks)
+  }, [probeResult])
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (waiting) {
+      wasWaitingRef.current = true
+      return
+    }
+    if (!wasWaitingRef.current || useMse || !video) return
+    wasWaitingRef.current = false
+    if (video.paused && video.readyState === HTMLMediaElement.HAVE_NOTHING) video.load()
+  }, [waiting, useMse])
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!useMse || !video || !probeResult) return
+    const controller = new AbortController()
+    let destroy: (() => void) | undefined
+    const startTime = video.currentTime
+    const resume = !video.paused
+    if (video.currentSrc) {
+      video.removeAttribute('src')
+      video.load()
+    }
+    playMp4WithMse(video, videoUrl, probeResult, {
+      startTime,
+      resume,
+      refreshUrl,
+      signal: controller.signal,
+      onError: () => setMseFailedUrl(videoUrl),
+    })
+      .then(dispose => {
+        if (controller.signal.aborted) dispose()
+        else destroy = dispose
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setMseFailedUrl(videoUrl)
+      })
+    return () => {
+      controller.abort()
+      destroy?.()
+    }
+  }, [useMse, probeResult, videoUrl, refreshUrl])
+
   return (
     <VideoPlayer poster={thumbnail}>
       <VideoSkin
@@ -62,8 +161,9 @@ const VideoPlayerView: FC<{
         style={{ aspectRatio: ratio }}
       >
         <Video
-          ref={videoRef}
-          src={isFlv ? undefined : videoUrl}
+          ref={attachVideo}
+          src={isFlv || useMse ? undefined : videoUrl}
+          preload={waiting ? 'none' : undefined}
           playsInline
           onLoadedMetadata={({ currentTarget: { videoWidth, videoHeight } }) => {
             if (videoWidth && videoHeight) onResize({ width: videoWidth, height: videoHeight })
@@ -86,6 +186,9 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   const playbackUrl = directFileUrl(file, asPath, hashedToken)
 
   const isFlv = getExtension(file.name) === 'flv'
+  const probeUrl = mp4Extensions.has(getExtension(file.name))
+    ? tracksUrl(asPath, hashedToken, file.file?.hashes?.quickXorHash || String(file.size))
+    : undefined
   const {
     loading,
     error,
@@ -133,6 +236,8 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
           subtitle={subtitle}
           isFlv={isFlv}
           mpegts={mpegts}
+          probeUrl={probeUrl}
+          refreshUrl={videoUrl}
           onResize={({ width, height }) => setMeasured({ url: playbackUrl, width, height })}
         />
       )}
