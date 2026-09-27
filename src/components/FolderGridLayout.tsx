@@ -25,11 +25,11 @@ const GridItem = memo(function GridItem({ c, path }: { c: OdFolderChildren; path
   const [brokenThumbnail, setBrokenThumbnail] = useState(false)
 
   return (
-    <div className="space-y-2">
-      <div className="h-32 overflow-hidden rounded border border-gray-900/10 dark:border-gray-500/30">
+    <div className="flex flex-col gap-2">
+      <div className="relative h-32 overflow-hidden rounded-item bg-well shadow-[inset_0_0_0_1px_var(--color-border)]">
         {thumbnail && !brokenThumbnail ? (
           <img
-            className="h-full w-full object-cover object-top"
+            className="size-full object-cover object-top"
             src={thumbnail}
             alt={c.name}
             loading="lazy"
@@ -37,22 +37,22 @@ const GridItem = memo(function GridItem({ c, path }: { c: OdFolderChildren; path
             onError={() => setBrokenThumbnail(true)}
           />
         ) : (
-          <div className="relative flex h-full w-full items-center justify-center rounded-lg">
-            <ChildIcon child={c} />
-            <span className="absolute right-0 bottom-0 m-1 font-medium text-gray-700 dark:text-gray-500">
-              {c.folder?.childCount}
-            </span>
+          <div className="flex size-full items-center justify-center text-muted-foreground">
+            <ChildIcon child={c} className="size-8 text-2xl leading-none" />
+            {c.folder?.childCount !== undefined && (
+              <span className="absolute right-2 bottom-1.5 font-medium text-xs tabular-nums">
+                {c.folder.childCount}
+              </span>
+            )}
           </div>
         )}
       </div>
 
-      <div className="flex items-start justify-center space-x-2">
-        <span className="w-5 flex-shrink-0 text-center">
-          <ChildIcon child={c} />
-        </span>
+      <div className="flex min-w-0 items-center justify-center gap-2 px-1">
+        <ChildIcon child={c} className="w-4.5 shrink-0 text-center text-muted-foreground" />
         <ChildName name={c.name} folder={Boolean(c.folder)} />
       </div>
-      <div className="truncate text-center font-mono text-gray-700 text-xs dark:text-gray-500">
+      <div className="truncate px-1 text-center text-muted-foreground text-xs tabular-nums">
         {formatModifiedDateTime(c.lastModifiedDateTime)}
       </div>
     </div>
@@ -66,48 +66,47 @@ const FolderGridLayout = (props: FolderLayoutProps) => {
   const itemCount = folderChildren.length
 
   return (
-    <div className="rounded bg-white shadow-sm dark:bg-gray-900 dark:text-gray-100">
-      <div className="flex items-center border-gray-900/10 border-b px-3 font-bold text-gray-600 text-xs uppercase tracking-widest dark:border-gray-500/30 dark:text-gray-400">
-        <div className="flex-1">{`${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}</div>
-        <SelectedFilesControls
-          {...props}
-          className="flex p-1.5 text-gray-700 dark:text-gray-400"
-          selectTitle={'Select all files'}
-        />
+    <div className="surface p-1 text-sm sm:rounded-popup">
+      <div className="flex h-10 items-center pr-1 pl-2 separator">
+        <div className="flex-1 font-medium text-muted-foreground text-xs tabular-nums">
+          {`${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
+        </div>
+        <SelectedFilesControls {...props} className="flex items-center" selectTitle={'Select all files'} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 p-3 md:grid-cols-4">
+      <div className="mt-1 grid grid-cols-2 gap-1 md:grid-cols-4">
         {folderChildren.map((c: OdFolderChildren) => {
           const itemPath = getItemPath(path, c.name)
           return (
             <div
               key={c.id}
-              className="group relative overflow-hidden rounded transition-all duration-100 hover:bg-gray-100 dark:hover:bg-gray-850"
+              className={`group relative rounded-popup p-1.5 pb-2 transition-colors duration-(--duration-fast) hover:bg-accent ${
+                selected[c.id] ? 'bg-accent' : ''
+              }`}
             >
-              <div className="absolute top-0 right-0 z-10 m-1 rounded bg-white/50 py-0.5 opacity-0 transition-all duration-100 group-hover:opacity-100 dark:bg-gray-900/50">
+              <div className="reveal surface-controls absolute top-2.5 right-2.5 z-10 flex rounded-full">
                 <FolderChildActions
                   {...props}
                   child={c}
                   itemPath={itemPath}
                   hashedToken={hashedToken}
-                  className=""
+                  className="flex"
                   downloadBaseUrl={baseUrl}
                 />
               </div>
 
-              <div
-                className={`${
-                  selected[c.id] ? 'opacity-100' : 'opacity-0'
-                } absolute top-0 left-0 z-10 m-1 rounded bg-white/50 py-0.5 group-hover:opacity-100 dark:bg-gray-900/50`}
-              >
-                {isSelectableFile(c) && (
+              {isSelectableFile(c) && (
+                <div
+                  className="reveal surface-controls absolute top-2.5 left-2.5 z-10 flex rounded-full"
+                  data-visible={selected[c.id] || undefined}
+                >
                   <Checkbox
                     checked={selected[c.id] ? 2 : 0}
                     onChange={() => toggleItemSelected(c.id)}
                     title={'Select file'}
                   />
-                )}
-              </div>
+                </div>
+              )}
 
               <Link href={itemPath} passHref prefetch={false}>
                 <GridItem c={c} path={itemPath} />

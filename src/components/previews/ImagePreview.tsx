@@ -11,7 +11,7 @@ const ImagePreview: FC<{ file: OdFileObject }> = ({ file }) => {
     <>
       <PreviewContainer>
         <img
-          className="mx-auto"
+          className="mx-auto rounded-item"
           src={directFileUrl(file, asPath, hashedToken)}
           alt={file.name}
           width={file.image?.width}

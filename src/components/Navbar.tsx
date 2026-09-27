@@ -1,4 +1,5 @@
-import type { IconProp } from '@fortawesome/fontawesome-svg-core'
+import type { IconDefinition } from '@fortawesome/free-brands-svg-icons'
+import { Link as LinkIcon, LogOut, Mail, Search } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -7,12 +8,24 @@ import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 // Type-only import — erased at compile time, so the server-only icon set is not bundled here.
 import type { BrandIcons } from '../utils/brandIcons'
-import { FontAwesomeIcon } from '../utils/fontawesome'
 
 import { getPublicRuntimeConfig } from '../utils/publicRuntimeConfig'
+import Tip from './Tip'
 
 const ClearTokensDialog = dynamic(() => import('./ClearTokensDialog'), { ssr: false })
 const SearchModal = dynamic(() => import('./SearchModal'), { ssr: false })
+
+const BrandIcon = ({ icon }: { icon?: IconDefinition }) => {
+  if (!icon) return <LinkIcon />
+  const [width, height, , , path] = icon.icon
+  return (
+    <svg className="size-4.5" viewBox={`0 0 ${width} ${height}`} fill="currentColor" aria-hidden="true">
+      {(Array.isArray(path) ? path : [path]).map(d => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  )
+}
 
 const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
   const router = useRouter()
@@ -64,68 +77,64 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
   }
 
   return (
-    <div className="sticky top-0 z-[100] border-gray-900/10 border-b bg-white bg-opacity-80 backdrop-blur-md dark:border-gray-500/30 dark:bg-gray-900">
+    <header className="surface-bar sticky top-0 z-40 w-full">
       {searchMounted && <SearchModal searchOpen={searchOpen} setSearchOpen={setSearchOpen} />}
 
-      <div className="mx-auto flex w-full items-center justify-between space-x-4 px-4 py-1">
-        <Link href="/" passHref className="flex items-center space-x-2 py-2 hover:opacity-80 md:p-2 dark:text-white">
-          <Image src={siteConfig.icon} alt="icon" width="25" height="25" priority />
-          <span className="hidden font-bold sm:block">{siteConfig.title}</span>
+      <nav className="mx-auto flex h-14 w-full max-w-5xl items-center gap-1 px-3 sm:px-4">
+        <Link
+          href="/"
+          passHref
+          className="mr-auto flex shrink-0 items-center gap-2.5 pr-2 transition-opacity duration-(--duration-base) hover:opacity-70"
+        >
+          <Image src={siteConfig.icon} alt="icon" width="24" height="24" priority />
+          <span className="hidden font-semibold text-[0.9375rem] sm:block">{siteConfig.title}</span>
         </Link>
 
-        <div className="flex flex-1 items-center space-x-4 text-gray-700 md:flex-initial">
-          <button
-            className="flex flex-1 items-center justify-between rounded-lg bg-gray-100 px-2.5 py-1.5 hover:opacity-80 md:w-48 dark:bg-gray-800 dark:text-white"
-            onClick={openSearchBox}
-          >
-            <div className="flex items-center space-x-2">
-              <FontAwesomeIcon className="h-4 w-4" icon="search" />
-              <span className="truncate font-medium text-sm">{'Search ...'}</span>
-            </div>
+        <button
+          type="button"
+          className="btn min-w-0 flex-1 justify-start bg-accent px-3 font-normal text-muted-foreground hover:bg-muted sm:mr-1 sm:max-w-64"
+          onClick={openSearchBox}
+        >
+          <Search className="size-4" />
+          <span className="truncate">{'Search ...'}</span>
+          <span className="ml-auto hidden items-center gap-1 md:flex">
+            <kbd className="kbd">{isMac ? '⌘' : 'Ctrl'}</kbd>
+            <kbd className="kbd">K</kbd>
+          </span>
+        </button>
 
-            <div className="hidden items-center space-x-1 md:flex">
-              <div className="rounded-lg bg-gray-200 px-2 py-1 font-medium text-xs dark:bg-gray-700">
-                {isMac ? '⌘' : 'Ctrl'}
-              </div>
-              <div className="rounded-lg bg-gray-200 px-2 py-1 font-medium text-xs dark:bg-gray-700">K</div>
-            </div>
-          </button>
-
-          {siteConfig.links.length !== 0 &&
-            siteConfig.links.map((l: { name: string; link: string }) => (
-              <a
-                key={l.name}
-                href={l.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-2 hover:opacity-80 dark:text-white"
-              >
-                <FontAwesomeIcon icon={(brandIcons[l.name.toLowerCase()] ?? 'link') as IconProp} />
-                <span className="hidden font-medium text-sm md:inline-block">{l.name}</span>
-              </a>
-            ))}
-
-          {siteConfig.email && (
-            <a href={siteConfig.email} className="flex items-center space-x-2 hover:opacity-80 dark:text-white">
-              <FontAwesomeIcon icon={['far', 'envelope']} />
-              <span className="hidden font-medium text-sm md:inline-block">{'Email'}</span>
+        {siteConfig.links.map((l: { name: string; link: string }) => (
+          <Tip key={l.name} label={l.name} side="bottom">
+            <a href={l.link} target="_blank" rel="noopener noreferrer" className="btn btn-icon" aria-label={l.name}>
+              <BrandIcon icon={brandIcons[l.name.toLowerCase()]} />
             </a>
-          )}
+          </Tip>
+        ))}
 
-          {tokenPresent && (
+        {siteConfig.email && (
+          <Tip label={'Email'} side="bottom">
+            <a href={siteConfig.email} className="btn btn-icon" aria-label="Email">
+              <Mail />
+            </a>
+          </Tip>
+        )}
+
+        {tokenPresent && (
+          <Tip label={'Logout'} side="bottom">
             <button
-              className="flex items-center space-x-2 hover:opacity-80 dark:text-white"
+              type="button"
+              className="btn btn-icon"
+              aria-label="Logout"
               onClick={() => {
                 setTokenDialogMounted(true)
                 setIsOpen(true)
               }}
             >
-              <span className="hidden font-medium text-sm md:inline-block">{'Logout'}</span>
-              <FontAwesomeIcon icon="sign-out-alt" />
+              <LogOut />
             </button>
-          )}
-        </div>
-      </div>
+          </Tip>
+        )}
+      </nav>
 
       {tokenDialogMounted && (
         <ClearTokensDialog
@@ -135,7 +144,7 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
           protectedRoutes={protectedRoutes}
         />
       )}
-    </div>
+    </header>
   )
 }
 

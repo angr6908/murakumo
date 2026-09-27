@@ -8,17 +8,17 @@ import { getStoredToken } from '../utils/protectedRouteHandler'
 
 export function DownloadingToast({ router, progress }: { router: NextRouter; progress?: string }) {
   return (
-    <div className="flex items-center space-x-2">
-      <div className="w-56">
-        <span>{progress ? `Downloading ${progress}%` : 'Downloading selected files...'}</span>
-
-        <div className="relative mt-2">
-          <div className="flex h-1 overflow-hidden rounded bg-gray-100">
-            <div style={{ width: `${progress}%` }} className="bg-gray-500 text-white transition-all duration-100"></div>
-          </div>
+    <div className="flex items-center gap-3">
+      <div className="flex w-52 flex-col gap-2">
+        <span className="tabular-nums">{progress ? `Downloading ${progress}%` : 'Downloading selected files...'}</span>
+        <div className="h-1 overflow-hidden rounded-full bg-muted">
+          <div
+            style={{ width: `${progress ?? 0}%` }}
+            className="h-full rounded-full bg-primary transition-[width] duration-(--duration-fast)"
+          />
         </div>
       </div>
-      <button className="rounded bg-red-500 p-2 text-white hover:bg-red-400" onClick={() => router.reload()}>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={() => router.reload()}>
         {'Cancel'}
       </button>
     </div>

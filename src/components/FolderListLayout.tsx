@@ -16,82 +16,79 @@ import {
 
 const FileListItem = memo(function FileListItem({ fileContent: c }: { fileContent: OdFolderChildren }) {
   return (
-    <div className="grid cursor-pointer grid-cols-10 items-center space-x-2 px-3 py-2.5">
-      <div className="col-span-10 flex items-center space-x-2 truncate md:col-span-6" title={c.name}>
-        <div className="w-5 flex-shrink-0 text-center">
-          <ChildIcon child={c} />
-        </div>
+    <div className="grid grid-cols-10 items-center gap-2 px-2 py-2">
+      <div className="col-span-10 flex min-w-0 items-center gap-2.5 md:col-span-6" title={c.name}>
+        <ChildIcon child={c} className="w-4.5 shrink-0 text-center text-muted-foreground" />
         <ChildName name={c.name} folder={Boolean(c.folder)} />
       </div>
-      <div className="col-span-3 hidden flex-shrink-0 font-mono text-gray-700 text-sm md:block dark:text-gray-500">
+      <div className="col-span-3 hidden truncate text-control text-muted-foreground tabular-nums md:block">
         {formatModifiedDateTime(c.lastModifiedDateTime)}
       </div>
-      <div className="col-span-1 hidden flex-shrink-0 truncate font-mono text-gray-700 text-sm md:block dark:text-gray-500">
+      <div className="col-span-1 hidden truncate text-control text-muted-foreground tabular-nums md:block">
         {humanFileSize(c.size)}
       </div>
     </div>
   )
 })
 
+const headerClass = 'hidden font-medium text-muted-foreground text-xs md:block'
+
 const FolderListLayout = (props: FolderLayoutProps) => {
   const { path, folderChildren, selected, toggleItemSelected } = props
   const hashedToken = getStoredToken(path)
 
   return (
-    <div className="rounded bg-white shadow-sm dark:bg-gray-900 dark:text-gray-100">
-      <div className="grid grid-cols-12 items-center space-x-2 border-gray-900/10 border-b px-3 dark:border-gray-500/30">
-        <div className="col-span-12 py-2 font-bold text-gray-600 text-xs uppercase tracking-widest md:col-span-6 dark:text-gray-300">
-          {'Name'}
+    <div className="surface p-1 text-sm sm:rounded-popup">
+      <div className="grid grid-cols-12 items-center separator">
+        <div className="col-span-12 grid h-10 grid-cols-10 items-center gap-2 px-2 md:col-span-10">
+          <div className="col-span-10 font-medium text-muted-foreground text-xs md:col-span-6">{'Name'}</div>
+          <div className={`col-span-3 ${headerClass}`}>{'Last Modified'}</div>
+          <div className={`col-span-1 ${headerClass}`}>{'Size'}</div>
         </div>
-        <div className="col-span-3 hidden font-bold text-gray-600 text-xs uppercase tracking-widest md:block dark:text-gray-300">
-          {'Last Modified'}
-        </div>
-        <div className="hidden font-bold text-gray-600 text-xs uppercase tracking-widest md:block dark:text-gray-300">
-          {'Size'}
-        </div>
-        <div className="hidden font-bold text-gray-600 text-xs uppercase tracking-widest md:block dark:text-gray-300">
-          {'Actions'}
-        </div>
-        <div className="hidden font-bold text-gray-600 text-xs uppercase tracking-widest md:block dark:text-gray-300">
-          <SelectedFilesControls
-            {...props}
-            className="hidden p-1.5 text-gray-700 md:flex dark:text-gray-400"
-            selectTitle={'Select files'}
-          />
-        </div>
+        <SelectedFilesControls
+          {...props}
+          className="col-span-2 hidden items-center justify-end pr-1 md:flex"
+          selectTitle={'Select files'}
+        />
       </div>
 
-      {folderChildren.map((c: OdFolderChildren) => {
-        const itemPath = getItemPath(path, c.name)
+      <div className="mt-1 flex flex-col gap-0.5">
+        {folderChildren.map((c: OdFolderChildren) => {
+          const itemPath = getItemPath(path, c.name)
 
-        return (
-          <div
-            className="grid grid-cols-12 transition-all duration-100 hover:bg-gray-100 dark:hover:bg-gray-850"
-            key={c.id}
-          >
-            <Link href={itemPath} passHref prefetch={false} className="col-span-12 md:col-span-10">
-              <FileListItem fileContent={c} />
-            </Link>
+          return (
+            <div
+              className={`grid grid-cols-12 items-center rounded-item transition-colors duration-(--duration-fast) hover:bg-accent ${
+                selected[c.id] ? 'bg-accent' : ''
+              }`}
+              key={c.id}
+            >
+              <Link href={itemPath} passHref prefetch={false} className="col-span-12 min-w-0 md:col-span-10">
+                <FileListItem fileContent={c} />
+              </Link>
 
-            <FolderChildActions
-              {...props}
-              child={c}
-              itemPath={itemPath}
-              hashedToken={hashedToken}
-              className="hidden p-1.5 text-gray-700 md:flex dark:text-gray-400"
-            />
-            <div className="hidden p-1.5 text-gray-700 md:flex dark:text-gray-400">
-              {isSelectableFile(c) && (
-                <Checkbox
-                  checked={selected[c.id] ? 2 : 0}
-                  onChange={() => toggleItemSelected(c.id)}
-                  title={'Select file'}
+              <div className="col-span-2 hidden items-center justify-end pr-1 md:flex">
+                <FolderChildActions
+                  {...props}
+                  child={c}
+                  itemPath={itemPath}
+                  hashedToken={hashedToken}
+                  className="flex items-center"
                 />
-              )}
+                <div className="flex w-8 justify-center">
+                  {isSelectableFile(c) && (
+                    <Checkbox
+                      checked={selected[c.id] ? 2 : 0}
+                      onChange={() => toggleItemSelected(c.id)}
+                      title={'Select file'}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }

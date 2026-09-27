@@ -221,7 +221,7 @@ const VideoPlayerView: FC<{
   return (
     <VideoPlayer poster={thumbnail}>
       <VideoSkin
-        className="w-full [--media-border-color:transparent] [--media-border-radius:0] sm:[&:not(:fullscreen)]:[clip-path:inset(0_round_0.75rem)]"
+        className="w-full [--media-border-color:transparent] [--media-border-radius:0] sm:[&:not(:fullscreen)]:[clip-path:inset(0_round_var(--radius-popup))]"
         style={{ aspectRatio: ratio }}
       >
         <Video
@@ -317,14 +317,12 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
         />
       )}
 
-      <div className="mt-4 space-y-4 px-4 sm:px-0">
-        <div>
-          <h1 className="break-words font-semibold text-gray-900 text-lg sm:text-xl dark:text-gray-100">
-            {stripExtension(file.name)}
-          </h1>
-          <p className="mt-1 text-gray-500 text-sm dark:text-gray-400">{details.join(' · ')}</p>
+      <div className="mt-4 flex flex-col gap-4 px-4 sm:px-1">
+        <div className="flex flex-col gap-1">
+          <h1 className="break-words font-semibold text-lg sm:text-xl">{stripExtension(file.name)}</h1>
+          <p className="text-control text-muted-foreground tabular-nums">{details.join(' · ')}</p>
         </div>
-        <DownloadButtonGroup className="justify-start">
+        <DownloadButtonGroup className="justify-start gap-2">
           {externalPlayers.map(({ text, img, url }) => (
             <DownloadButton key={text} onClickCallback={() => window.open(url)} btnText={text} btnImage={img} />
           ))}

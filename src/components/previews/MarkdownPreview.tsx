@@ -37,7 +37,7 @@ const codeRenderer = (props: any) => {
   }
 
   return (
-    <SyntaxHighlighter language={match[1]} styleName="tomorrowNight" preTag="div" {...rest}>
+    <SyntaxHighlighter language={match[1]} preTag="div" {...rest}>
       {String(children).replace(/\n$/, '')}
     </SyntaxHighlighter>
   )

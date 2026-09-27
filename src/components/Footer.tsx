@@ -2,10 +2,10 @@ import { getPublicRuntimeConfig } from '../utils/publicRuntimeConfig'
 
 const Footer = () => {
   return (
-    <div
-      className="w-full border-gray-900/10 border-t p-4 text-center font-medium text-gray-400 text-xs dark:border-gray-500/30"
+    <footer
+      className="w-full px-4 py-8 text-center text-muted-foreground text-xs [&_a]:link [&_a]:text-foreground"
       dangerouslySetInnerHTML={{ __html: getPublicRuntimeConfig().footer }}
-    ></div>
+    ></footer>
   )
 }
 

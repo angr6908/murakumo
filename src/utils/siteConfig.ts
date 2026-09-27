@@ -24,7 +24,7 @@ export const defaultSiteConfig: PublicRuntimeConfig = {
   maxItems: 100,
   googleFontSans: 'Inter',
   googleFontMono: 'Fira Mono',
-  googleFontLinks: ['https://fonts.googleapis.com/css2?family=Fira+Mono&family=Inter:wght@400;500;700&display=swap'],
+  googleFontLinks: ['https://fonts.googleapis.com/css2?family=Fira+Mono&family=Inter:wght@400..700&display=swap'],
   footer:
     'Powered by <a href="https://github.com/angr6908/murakumo" target="_blank" rel="noopener noreferrer">Murakumo</a>.',
   protectedRoutes: [],

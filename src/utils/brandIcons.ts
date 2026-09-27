@@ -1,4 +1,4 @@
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import type { IconDefinition } from '@fortawesome/free-brands-svg-icons'
 import * as allBrandIcons from '@fortawesome/free-brands-svg-icons'
 import type { PublicSiteLink } from './siteConfig'
 

@@ -12,7 +12,7 @@ const PDFPreview: React.FC<{ file: OdFileObject }> = ({ file }) => {
 
   return (
     <div>
-      <div className="w-full overflow-hidden rounded" style={{ height: '90vh' }}>
+      <div className="surface w-full overflow-hidden sm:rounded-popup" style={{ height: '90vh' }}>
         <iframe src={url} frameBorder="0" width="100%" height="100%"></iframe>
       </div>
       <DownloadFooter />

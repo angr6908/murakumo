@@ -1,3 +1,4 @@
+import { ExternalLink } from 'lucide-react'
 import type { FC } from 'react'
 import { DownloadButton } from '../DownloadBtnGtoup'
 import { DownloadFooter, PreviewContainer } from './Containers'
@@ -18,18 +19,14 @@ const URLPreview: FC = () => (
       return (
         <div>
           <PreviewContainer>
-            <pre className="overflow-x-scroll p-0 text-sm md:p-3">{content}</pre>
+            <pre className="scroll-thin overflow-x-auto font-mono text-control">{content}</pre>
           </PreviewContainer>
           <DownloadFooter>
-            <div className="flex justify-center">
-              <DownloadButton
-                onClickCallback={() => window.open(url)}
-                btnColor="blue"
-                btnText={'Open URL'}
-                btnIcon="external-link-alt"
-                btnTitle={`Open ${url}`}
-              />
-            </div>
+            <DownloadButton
+              onClickCallback={() => window.open(url)}
+              btnText={'Open URL'}
+              btnIcon={ExternalLink}
+            />
           </DownloadFooter>
         </div>
       )

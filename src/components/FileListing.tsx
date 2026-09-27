@@ -1,3 +1,4 @@
+import { ChevronIcon } from '@videojs/react/icons'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { type FC, type ReactElement, useMemo, useState } from 'react'
@@ -5,18 +6,16 @@ import toast from 'react-hot-toast'
 import type { OdFileObject, OdFolderObject } from '../types'
 import { basename, getItemPath, isNotPersonalVaultItem, type QueryMap, queryToPath } from '../utils/drivePath'
 import { useProtectedSWRInfinite } from '../utils/fetchWithSWR'
-import { FontAwesomeIcon } from '../utils/fontawesome'
 import { getExtension } from '../utils/getFileIcon'
 import { getPreviewType, preview } from '../utils/getPreviewType'
 import { rawFileUrl } from '../utils/odUrls'
 import { getStoredToken } from '../utils/protectedRouteHandler'
-import useLocalStorage from '../utils/useLocalStorage'
 import Auth from './Auth'
 import { isSelectableFile } from './FolderControls'
 import FolderGridLayout from './FolderGridLayout'
 import FolderListLayout from './FolderListLayout'
 import FourOhFour from './FourOhFour'
-import Loading, { LoadingIcon } from './Loading'
+import Loading, { Spinner } from './Loading'
 import {
   DownloadingToast,
   downloadMultipleFiles,
@@ -25,7 +24,7 @@ import {
   traverseFolder,
 } from './MultiFileDownloader'
 import { PreviewContainer } from './previews/Containers'
-import { layouts } from './SwitchLayout'
+import { useLayout } from './SwitchLayout'
 
 const PreviewLoading = () => (
   <PreviewContainer>
@@ -83,7 +82,7 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
   const [folderGenerating, setFolderGenerating] = useState<Record<string, boolean>>({})
 
   const router = useRouter()
-  const [layout] = useLocalStorage('preferredLayout', layouts[0])
+  const [layout] = useLayout()
 
   const path = queryToPath(query)
 
@@ -237,29 +236,27 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
         {layout.name === 'Grid' ? <FolderGridLayout {...folderProps} /> : <FolderListLayout {...folderProps} />}
 
         {!onlyOnePage && (
-          <div className="rounded-b bg-white dark:bg-gray-900 dark:text-gray-100">
-            <div className="border-gray-200 border-b p-3 text-center font-mono text-gray-400 text-sm dark:border-gray-700">
-              {`- showing ${size} page(s) ` +
-                (isLoadingMore ? `of ... file(s) -` : `of ${folderChildren.length} file(s) -`)}
+          <div className="mt-3 flex flex-col items-center gap-2">
+            <div className="text-muted-foreground text-xs tabular-nums">
+              {`Showing ${size} page(s) of ` + (isLoadingMore ? '... file(s)' : `${folderChildren.length} file(s)`)}
             </div>
             <button
-              className={`flex w-full items-center justify-center space-x-2 p-3 disabled:cursor-not-allowed ${
-                isLoadingMore || isReachingEnd ? 'opacity-60' : 'hover:bg-gray-100 dark:hover:bg-gray-850'
-              }`}
+              type="button"
+              className="btn btn-secondary"
               onClick={() => setSize(size + 1)}
               disabled={isLoadingMore || isReachingEnd}
             >
               {isLoadingMore ? (
                 <>
-                  <LoadingIcon className="inline-block h-4 w-4 animate-spin" />
-                  <span>{'Loading ...'}</span>{' '}
+                  <Spinner />
+                  <span>{'Loading ...'}</span>
                 </>
               ) : isReachingEnd ? (
                 <span>{'No more files'}</span>
               ) : (
                 <>
                   <span>{'Load more'}</span>
-                  <FontAwesomeIcon icon="chevron-circle-down" />
+                  <ChevronIcon className="size-4 rotate-90" />
                 </>
               )}
             </button>

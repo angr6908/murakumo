@@ -7,7 +7,7 @@ const TextPreview: FC = () => (
     {content => (
       <div>
         <PreviewContainer>
-          <pre className="overflow-x-scroll p-0 text-sm md:p-3">{content}</pre>
+          <pre className="scroll-thin overflow-x-auto font-mono text-control">{content}</pre>
         </PreviewContainer>
         <DownloadFooter />
       </div>

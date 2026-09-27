@@ -1,12 +1,14 @@
 import type { FC } from 'react'
 import type { OdFileObject } from '../../types'
 import { formatModifiedDateTime, humanFileSize } from '../../utils/fileDetails'
-import { FontAwesomeIcon } from '../../utils/fontawesome'
 import { getFileIcon } from '../../utils/getFileIcon'
 
 import { DownloadFooter, PreviewContainer } from './Containers'
 
+const labelClass = 'font-medium text-muted-foreground text-xs'
+
 const DefaultPreview: FC<{ file: OdFileObject }> = ({ file }) => {
+  const Icon = getFileIcon(file.name, { video: Boolean(file.video) })
   const details = [
     ['Last modified', formatModifiedDateTime(file.lastModifiedDateTime)],
     ['File size', humanFileSize(file.size)],
@@ -21,36 +23,35 @@ const DefaultPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   return (
     <div>
       <PreviewContainer>
-        <div className="items-center px-5 py-4 md:flex md:space-x-8">
-          <div className="rounded-lg border border-gray-900/10 px-8 py-20 text-center dark:border-gray-500/30">
-            <FontAwesomeIcon icon={getFileIcon(file.name, { video: Boolean(file.video) })} />
-            <div className="mt-6 line-clamp-3 font-medium text-sm md:w-28">{file.name}</div>
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:gap-8 md:p-2">
+          <div className="well flex flex-col items-center gap-4 px-6 py-14 text-center md:w-44">
+            <Icon className="size-8 text-muted-foreground" />
+            <div className="line-clamp-3 break-all font-medium text-control">{file.name}</div>
           </div>
 
-          <div className="flex flex-col space-y-2 py-4 md:flex-1">
-            {details.map(([label, value]) => (
-              <div key={label}>
-                <div className="py-2 font-medium text-xs uppercase opacity-80">{label}</div>
-                <div>{value}</div>
-              </div>
-            ))}
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <dl className="grid gap-4 sm:grid-cols-3">
+              {details.map(([label, value]) => (
+                <div key={label} className="flex flex-col gap-1">
+                  <dt className={labelClass}>{label}</dt>
+                  <dd className="text-sm tabular-nums">{value}</dd>
+                </div>
+              ))}
+            </dl>
 
-            <div>
-              <div className="py-2 font-medium text-xs uppercase opacity-80">{'Hashes'}</div>
-              <table className="block w-full overflow-scroll whitespace-nowrap text-sm md:table">
-                <tbody>
-                  {hashes.map(([label, value]) => (
-                    <tr key={label} className="border-y bg-white dark:border-gray-700 dark:bg-gray-900">
-                      <td className="bg-gray-50 px-3 py-1 text-left font-medium text-gray-700 text-xs uppercase tracking-wider dark:bg-gray-800 dark:text-gray-400">
-                        {label}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-1 font-mono text-gray-500 dark:text-gray-400">
-                        {value ?? 'Unavailable'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex flex-col gap-1.5">
+              <div className={labelClass}>{'Hashes'}</div>
+              <dl className="well scroll-thin overflow-x-auto text-xs">
+                {hashes.map(([label, value], i) => (
+                  <div
+                    key={label}
+                    className={`flex gap-3 px-3 py-2 ${i > 0 ? 'shadow-[inset_0_1px_0_0_var(--color-border)]' : ''}`}
+                  >
+                    <dt className="w-20 shrink-0 font-medium text-muted-foreground">{label}</dt>
+                    <dd className="whitespace-nowrap font-mono">{value ?? 'Unavailable'}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           </div>
         </div>

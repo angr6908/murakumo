@@ -1,35 +1,31 @@
-import Image from 'next/image'
+import { CircleAlert } from 'lucide-react'
 
 const FourOhFour: React.FC<{ errorMsg: string }> = ({ errorMsg }) => {
   return (
-    <div className="my-12">
-      <div className="mx-auto w-1/3">
-        <Image src="/images/fabulous-rip-2.png" alt="404" width={912} height={912} priority />
+    <div className="mx-auto flex max-w-xl flex-col items-center gap-4 py-12 text-center text-control">
+      <div className="grid size-11 place-items-center rounded-full bg-accent">
+        <CircleAlert />
       </div>
-      <div className="mx-auto mt-6 max-w-xl text-gray-500">
-        <div className="mb-8 font-bold text-xl">
-          {/* eslint-disable-next-line react/no-unescaped-entities */}
-          Oops, that's a <span className="underline decoration-red-500 decoration-wavy">four-oh-four</span>.
-        </div>
-        <div className="mb-4 overflow-hidden break-all rounded border border-gray-400/20 bg-gray-50 p-2 font-mono text-xs dark:bg-gray-800">
-          {errorMsg}
-        </div>
-        <div className="text-sm">
-          Press{' '}
-          <kbd className="rounded border border-gray-400/20 bg-gray-100 px-1 font-mono text-xs dark:bg-gray-800">
-            F12
-          </kbd>{' '}
-          and open devtools for more details, or seek help at{' '}
-          <a
-            className="text-blue-600 hover:text-blue-700 hover:underline"
-            href="https://github.com/angr6908/murakumo/discussions"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Murakumo discussions
-          </a>
-          .
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <div className="dialog-title">{"Oops, that's a four-oh-four."}</div>
+        <div className="text-muted-foreground">{'Something went wrong while loading this page.'}</div>
+      </div>
+      <div className="well w-full break-all px-3 py-2 text-left font-mono text-muted-foreground text-xs">
+        {errorMsg}
+      </div>
+      <div className="text-muted-foreground">
+        {'Press '}
+        <kbd className="kbd">F12</kbd>
+        {' and open devtools for more details, or seek help at '}
+        <a
+          className="link text-foreground"
+          href="https://github.com/angr6908/murakumo/discussions"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {'Murakumo discussions'}
+        </a>
+        .
       </div>
     </div>
   )

@@ -7,9 +7,7 @@ import { getServerSidePublicConfigProps } from '../utils/serverConfig'
 function Folders() {
   const { query } = useRouter()
 
-  return (
-    <DrivePage query={query} navClassName="mb-4 flex items-center justify-between space-x-3 px-4 sm:px-0 sm:pl-1" />
-  )
+  return <DrivePage query={query} />
 }
 Folders.getLayout = driveLayout
 export default Folders

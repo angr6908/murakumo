@@ -1,10 +1,10 @@
-import Image from 'next/image'
+import { ArrowRight, Lock } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { type FC, useState } from 'react'
-import { FontAwesomeIcon } from '../utils/fontawesome'
 
 import { matchProtectedRoute } from '../utils/protectedRouteHandler'
 import useLocalStorage from '../utils/useLocalStorage'
+import Tip from './Tip'
 
 const Auth: FC<{ redirect: string }> = ({ redirect }) => {
   const authTokenPath = matchProtectedRoute(redirect)
@@ -19,29 +19,33 @@ const Auth: FC<{ redirect: string }> = ({ redirect }) => {
   }
 
   return (
-    <div className="mx-auto flex max-w-sm flex-col space-y-4 md:my-10">
-      <div className="mx-auto w-3/4 md:w-5/6">
-        <Image src={'/images/fabulous-wapmire-weekdays.png'} alt="authenticate" width={912} height={912} priority />
+    <div className="mx-auto flex max-w-sm flex-col items-center gap-4 py-12 text-center text-control">
+      <div className="grid size-11 place-items-center rounded-full bg-accent">
+        <Lock />
       </div>
-      <div className="font-bold text-gray-900 text-lg dark:text-gray-100">{'Enter Password'}</div>
+      <div className="flex flex-col gap-1.5">
+        <div className="dialog-title">{'Enter Password'}</div>
+        <p className="text-muted-foreground">
+          {'This route (the folder itself and the files inside) is password protected. ' +
+            'If you know the password, please enter it below.'}
+        </p>
+      </div>
 
-      <p className="font-medium text-gray-500 text-sm">
-        {'This route (the folder itself and the files inside) is password protected. ' +
-          'If you know the password, please enter it below.'}
-      </p>
-
-      <div className="flex items-center space-x-2">
+      <div className="flex w-full items-center gap-2">
         <input
-          className="flex-1 rounded border border-gray-600/10 p-2 font-mono dark:bg-gray-600 dark:text-white"
+          className="input font-mono"
           type="password"
           placeholder="************"
+          aria-label="Password"
           value={token}
           onChange={e => setToken(e.target.value)}
           onKeyDown={e => ['Enter', 'NumpadEnter'].includes(e.key) && submit()}
         />
-        <button className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500" onClick={submit}>
-          <FontAwesomeIcon icon="arrow-right" />
-        </button>
+        <Tip label={'Unlock'}>
+          <button type="button" className="btn btn-primary btn-icon" aria-label="Unlock" onClick={submit}>
+            <ArrowRight />
+          </button>
+        </Tip>
       </div>
     </div>
   )

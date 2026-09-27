@@ -1,14 +1,11 @@
+import { ArrowRight, Sparkles, TriangleAlert } from 'lucide-react'
 import type { GetServerSideProps } from 'next'
 import { useRouter } from 'next/router'
-import OAuthCard from '../../components/OAuthCard'
+import OAuthCard, { Callout, inlineCodeClass } from '../../components/OAuthCard'
 import PageLayout from '../../components/PageLayout'
 import { getOAuthPublicConfig, type OAuthPublicConfig } from '../../utils/apiConfig'
-import { FontAwesomeIcon } from '../../utils/fontawesome'
 import { getServerSidePublicConfigProps, type PublicConfigProps } from '../../utils/serverConfig'
 
-const labelClass =
-  'bg-gray-50 px-3 py-1 text-left text-xs font-medium tracking-wider text-gray-700 uppercase dark:bg-gray-800 dark:text-gray-400'
-const valueClass = 'px-3 py-1 whitespace-nowrap text-gray-500 dark:text-gray-400'
 
 export default function OAuthStep1({
   publicConfig,
@@ -27,52 +24,45 @@ export default function OAuthStep1({
 
   return (
     <PageLayout title={`OAuth Step 1 - ${publicConfig.title}`} brandIcons={brandIcons}>
-      <OAuthCard
-        imageSrc="/images/fabulous-fireworks.png"
-        imageAlt="fabulous fireworks"
-        stepTitle="Step 1/3: Preparations"
-      >
-        <p className="py-1 font-medium text-sm text-yellow-400">
-          <FontAwesomeIcon icon="exclamation-triangle" className="mr-1" /> OAuth tokens are stored in Vercel Blob for
-          this deployment. Make sure the Blob store is connected so the session survives redeploys and cold starts.
+      <OAuthCard icon={Sparkles} step={1} stepTitle="Preparations">
+        <Callout icon={TriangleAlert} iconClassName="text-warning">
+          OAuth tokens are stored in Vercel Blob for this deployment. Make sure the Blob store is connected so the
+          session survives redeploys and cold starts.
+        </Callout>
+
+        <p>
+          Authorisation is required as no valid <code className={inlineCodeClass}>access_token</code> or{' '}
+          <code className={inlineCodeClass}>refresh_token</code> is present on this deployed instance. Check the
+          following configurations before proceeding with authorising Murakumo with your own Microsoft account.
         </p>
 
-        <p className="py-1">
-          Authorisation is required as no valid{' '}
-          <code className="font-mono text-sm underline decoration-pink-600 decoration-wavy">access_token</code> or{' '}
-          <code className="font-mono text-sm underline decoration-green-600 decoration-wavy">refresh_token</code> is
-          present on this deployed instance. Check the following configurations before proceeding with authorising
-          Murakumo with your own Microsoft account.
-        </p>
+        <dl className="well scroll-thin overflow-x-auto text-xs">
+          {configRows.map(([label, value], i) => (
+            <div
+              key={label}
+              className={`flex gap-3 px-3 py-2 ${i > 0 ? 'shadow-[inset_0_1px_0_0_var(--color-border)]' : ''}`}
+            >
+              <dt className="w-32 shrink-0 font-medium text-muted-foreground">{label}</dt>
+              <dd className="whitespace-nowrap font-mono">{value}</dd>
+            </div>
+          ))}
+        </dl>
 
-        <div className="my-4 overflow-hidden">
-          <table className="min-w-full table-auto">
-            <tbody>
-              {configRows.map(([label, value]) => (
-                <tr key={label} className="border-y bg-white dark:border-gray-700 dark:bg-gray-900">
-                  <td className={labelClass}>{label}</td>
-                  <td className={valueClass}>
-                    <code className="font-mono text-sm">{value}</code>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Callout icon={TriangleAlert} iconClassName="text-warning">
+          If you see anything missing or incorrect, update your Vercel environment variables and redeploy this
+          instance.
+        </Callout>
 
-        <p className="py-1 font-medium text-sm">
-          <FontAwesomeIcon icon="exclamation-triangle" className="mr-1 text-yellow-400" /> If you see anything missing
-          or incorrect, update your Vercel environment variables and redeploy this instance.
-        </p>
-
-        <div className="mt-6 mb-2 text-right">
+        <div className="flex justify-end pt-2">
           <button
-            className="rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-2.5 text-center font-medium text-sm text-white hover:bg-gradient-to-bl"
+            type="button"
+            className="btn btn-primary"
             onClick={() => {
               router.push('/murakumo-oauth/step-2')
             }}
           >
-            <span>Proceed to OAuth</span> <FontAwesomeIcon icon="arrow-right" />
+            <span>Proceed to OAuth</span>
+            <ArrowRight className="size-4" />
           </button>
         </div>
       </OAuthCard>

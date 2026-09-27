@@ -1,12 +1,13 @@
+import { Download, Folder, Link } from 'lucide-react'
 import { type FC, type MouseEventHandler, useEffect, useRef } from 'react'
 import type { OdFolderChildren, OdFolderObject } from '../types'
 
-import { FontAwesomeIcon } from '../utils/fontawesome'
 import { getBaseUrl } from '../utils/getBaseUrl'
 import { getFileIcon, getRawExtension } from '../utils/getFileIcon'
 import { rawFileUrl } from '../utils/odUrls'
 import { useCopyLink } from '../utils/useCopyLink'
-import { LoadingIcon } from './Loading'
+import { Spinner } from './Loading'
+import Tip from './Tip'
 
 export type FolderLayoutProps = {
   path: string
@@ -22,9 +23,7 @@ export type FolderLayoutProps = {
   handleFolderDownload: (path: string, id: string, name?: string) => () => void
 }
 
-const actionButtonClass =
-  'cursor-pointer rounded p-1.5 hover:bg-gray-300 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white dark:hover:bg-gray-600 disabled:dark:text-gray-600 disabled:hover:dark:bg-gray-900'
-const itemActionClass = 'cursor-pointer rounded px-1.5 py-1 hover:bg-gray-300 dark:hover:bg-gray-600'
+const iconButtonClass = 'btn btn-icon btn-sm text-muted-foreground hover:text-foreground'
 const emojiSegmenter =
   typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null
 const emojiPattern = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u
@@ -58,13 +57,11 @@ export const ChildName: FC<{ name: string; folder?: boolean }> = ({ name, folder
   )
 }
 
-export const ChildIcon: FC<{ child: OdFolderChildren }> = ({ child }) => {
+export const ChildIcon: FC<{ child: OdFolderChildren; className?: string }> = ({ child, className }) => {
   const emoji = leadingEmoji(child.name)
-  return emoji ? (
-    <span>{emoji}</span>
-  ) : (
-    <FontAwesomeIcon icon={child.file ? getFileIcon(child.name, { video: Boolean(child.video) }) : ['far', 'folder']} />
-  )
+  if (emoji) return <span className={className}>{emoji}</span>
+  const Icon = child.file ? getFileIcon(child.name, { video: Boolean(child.video) }) : Folder
+  return <Icon className={className} />
 }
 
 export const Checkbox: FC<{
@@ -87,27 +84,27 @@ export const Checkbox: FC<{
   }
 
   return (
-    <span
-      title={title}
-      className="inline-flex cursor-pointer items-center rounded p-1.5 hover:bg-gray-300 dark:hover:bg-gray-600"
-      onClick={handleClick}
-    >
-      <input
-        className="form-check-input cursor-pointer"
-        type="checkbox"
-        checked={Boolean(checked)}
-        ref={ref}
-        aria-label={title}
-        onChange={onChange}
-      />
-    </span>
+    <Tip label={title}>
+      <span className="btn btn-icon btn-sm" onClick={handleClick}>
+        <input
+          className="size-4 cursor-pointer accent-foreground"
+          type="checkbox"
+          checked={Boolean(checked)}
+          ref={ref}
+          aria-label={title}
+          onChange={onChange}
+        />
+      </span>
+    </Tip>
   )
 }
 
-export const Downloading: FC<{ title: string; style: string }> = ({ title, style }) => (
-  <span title={title} className={`${style} rounded`} role="status">
-    <LoadingIcon className="svg-inline--fa inline-block h-4 w-4 animate-spin" />
-  </span>
+export const Downloading: FC<{ title: string }> = ({ title }) => (
+  <Tip label={title}>
+    <span className="btn btn-icon btn-sm text-muted-foreground" role="status" aria-label={title}>
+      <Spinner />
+    </span>
+  </Tip>
 )
 
 export function SelectedFilesControls({
@@ -129,27 +126,33 @@ export function SelectedFilesControls({
 
   return (
     <div className={className}>
-      <Checkbox checked={totalSelected} onChange={toggleTotalSelected} title={selectTitle} />
-      <button
-        title={'Copy selected files permalink'}
-        className={actionButtonClass}
-        disabled={totalSelected === 0}
-        onClick={() => copyLink(handleSelectedPermalink(getBaseUrl()), 'Copied selected files permalink.')}
-      >
-        <FontAwesomeIcon icon={['far', 'copy']} size="lg" />
-      </button>
-      {totalGenerating ? (
-        <Downloading title={'Downloading selected files, refresh page to cancel'} style="p-1.5" />
-      ) : (
+      <Tip label={'Copy selected files permalink'}>
         <button
-          title={'Download selected files'}
-          className={actionButtonClass}
+          type="button"
+          className={iconButtonClass}
+          aria-label="Copy selected files permalink"
           disabled={totalSelected === 0}
-          onClick={handleSelectedDownload}
+          onClick={() => copyLink(handleSelectedPermalink(getBaseUrl()), 'Copied selected files permalink.')}
         >
-          <FontAwesomeIcon icon={['far', 'arrow-alt-circle-down']} size="lg" />
+          <Link className="size-4" />
         </button>
+      </Tip>
+      {totalGenerating ? (
+        <Downloading title={'Downloading selected files, refresh page to cancel'} />
+      ) : (
+        <Tip label={'Download selected files'}>
+          <button
+            type="button"
+            className={iconButtonClass}
+            aria-label="Download selected files"
+            disabled={totalSelected === 0}
+            onClick={handleSelectedDownload}
+          >
+            <Download className="size-4" />
+          </button>
+        </Tip>
       )}
+      <Checkbox checked={totalSelected} onChange={toggleTotalSelected} title={selectTitle} />
     </div>
   )
 }
@@ -175,41 +178,52 @@ export function FolderChildActions({
     <div className={className}>
       {child.folder ? (
         <>
-          <span
-            title={'Copy folder permalink'}
-            className={itemActionClass}
-            onClick={() => copyLink(`${getBaseUrl()}${itemPath}`, 'Copied folder permalink.')}
-          >
-            <FontAwesomeIcon icon={['far', 'copy']} />
-          </span>
-          {folderGenerating[child.id] ? (
-            <Downloading title={'Downloading folder, refresh page to cancel'} style="px-1.5 py-1" />
-          ) : (
-            <span
-              title={'Download folder'}
-              className={itemActionClass}
-              onClick={handleFolderDownload(itemPath, child.id, child.name)}
+          <Tip label={'Copy folder permalink'}>
+            <button
+              type="button"
+              className={iconButtonClass}
+              aria-label="Copy folder permalink"
+              onClick={() => copyLink(`${getBaseUrl()}${itemPath}`, 'Copied folder permalink.')}
             >
-              <FontAwesomeIcon icon={['far', 'arrow-alt-circle-down']} />
-            </span>
+              <Link className="size-4" />
+            </button>
+          </Tip>
+          {folderGenerating[child.id] ? (
+            <Downloading title={'Downloading folder, refresh page to cancel'} />
+          ) : (
+            <Tip label={'Download folder'}>
+              <button
+                type="button"
+                className={iconButtonClass}
+                aria-label="Download folder"
+                onClick={handleFolderDownload(itemPath, child.id, child.name)}
+              >
+                <Download className="size-4" />
+              </button>
+            </Tip>
           )}
         </>
       ) : (
         <>
-          <span
-            title={'Copy raw file permalink'}
-            className={itemActionClass}
-            onClick={() => copyLink(rawFileUrl(itemPath, hashedToken, getBaseUrl()), 'Copied raw file permalink.')}
-          >
-            <FontAwesomeIcon icon={['far', 'copy']} />
-          </span>
-          <a
-            title={'Download file'}
-            className={itemActionClass}
-            href={rawFileUrl(itemPath, hashedToken, downloadBaseUrl)}
-          >
-            <FontAwesomeIcon icon={['far', 'arrow-alt-circle-down']} />
-          </a>
+          <Tip label={'Copy raw file permalink'}>
+            <button
+              type="button"
+              className={iconButtonClass}
+              aria-label="Copy raw file permalink"
+              onClick={() => copyLink(rawFileUrl(itemPath, hashedToken, getBaseUrl()), 'Copied raw file permalink.')}
+            >
+              <Link className="size-4" />
+            </button>
+          </Tip>
+          <Tip label={'Download file'}>
+            <a
+              className={iconButtonClass}
+              aria-label="Download file"
+              href={rawFileUrl(itemPath, hashedToken, downloadBaseUrl)}
+            >
+              <Download className="size-4" />
+            </a>
+          </Tip>
         </>
       )}
     </div>

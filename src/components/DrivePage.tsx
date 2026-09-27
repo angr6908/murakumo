@@ -7,18 +7,10 @@ import FileListing from './FileListing'
 import PageLayout from './PageLayout'
 import SwitchLayout from './SwitchLayout'
 
-const defaultNavClassName = 'mb-4 flex items-center justify-between px-4 sm:px-0 sm:pl-1'
-
-export default function DrivePage({
-  query,
-  navClassName = defaultNavClassName,
-}: {
-  query?: QueryMap
-  navClassName?: string
-}) {
+export default function DrivePage({ query }: { query?: QueryMap }) {
   return (
     <div className="mx-auto w-full max-w-5xl py-4 sm:p-4">
-      <nav className={navClassName}>
+      <nav className="mb-3 flex items-center justify-between gap-3 px-2 sm:px-0">
         <Breadcrumb query={query} />
         <SwitchLayout />
       </nav>

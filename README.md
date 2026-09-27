@@ -34,7 +34,7 @@ SITE_LINKS="[]"
 DATETIME_FORMAT="YYYY-MM-DD HH:mm:ss"
 GOOGLE_FONT_SANS="Inter"
 GOOGLE_FONT_MONO="Fira Mono"
-GOOGLE_FONT_LINKS='["https://fonts.googleapis.com/css2?family=Fira+Mono&family=Inter:wght@400;500;700&display=swap"]'
+GOOGLE_FONT_LINKS='["https://fonts.googleapis.com/css2?family=Fira+Mono&family=Inter:wght@400..700&display=swap"]'
 AUTH_TOKEN_BLOB_PATH="onedrive-auth-tokens.json"
 ```
 

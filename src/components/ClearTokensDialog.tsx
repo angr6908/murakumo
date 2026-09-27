@@ -1,6 +1,6 @@
-import { Dialog } from '@headlessui/react'
+import { Dialog } from '@videojs/react'
+import { KeyRound, Trash } from 'lucide-react'
 
-import { FontAwesomeIcon } from '../utils/fontawesome'
 import ModalShell from './ModalShell'
 
 export default function ClearTokensDialog({
@@ -15,42 +15,28 @@ export default function ClearTokensDialog({
   protectedRoutes: string[]
 }) {
   return (
-    <ModalShell
-      open={isOpen}
-      onClose={onClose}
-      backdropClassName="bg-gray-50 dark:bg-gray-800"
-      panelClassName="my-8 inline-block w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle transition-all dark:bg-gray-900"
-      leaveDuration="duration-50"
-    >
-      <Dialog.Title className="font-bold text-gray-900 text-lg dark:text-gray-100">{'Clear all tokens?'}</Dialog.Title>
-      <div className="mt-2">
-        <p className="text-gray-500 text-sm">
+    <ModalShell open={isOpen} onClose={onClose} panelClassName="max-w-sm">
+      <div className="dialog-content">
+        <Dialog.Title className="dialog-title">{'Clear all tokens?'}</Dialog.Title>
+        <Dialog.Description className="dialog-description">
           {'These tokens are used to authenticate yourself into password protected folders, ' +
             'clearing them means that you will need to re-enter the passwords again.'}
-        </p>
+        </Dialog.Description>
       </div>
 
-      <div className="mt-4 max-h-32 overflow-y-scroll font-mono text-sm dark:text-gray-100">
+      <div className="well scroll-thin max-h-32 overflow-y-auto p-1.5">
         {protectedRoutes.map(route => (
-          <div key={route} className="flex items-center space-x-1">
-            <FontAwesomeIcon icon="key" />
+          <div key={route} className="flex items-center gap-2 px-1.5 py-1 font-mono text-muted-foreground text-xs">
+            <KeyRound className="size-3.5 shrink-0" />
             <span className="truncate">{route}</span>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 flex items-center justify-end">
-        <button
-          className="mr-3 inline-flex items-center justify-center space-x-2 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-400"
-          onClick={onClose}
-        >
-          {'Cancel'}
-        </button>
-        <button
-          className="inline-flex items-center justify-center space-x-2 rounded bg-red-500 px-4 py-2 text-white hover:bg-red-400"
-          onClick={onClear}
-        >
-          <FontAwesomeIcon icon={['far', 'trash-alt']} />
+      <div className="dialog-actions">
+        <Dialog.Close className="btn btn-secondary">{'Cancel'}</Dialog.Close>
+        <button type="button" className="btn btn-danger" onClick={onClear}>
+          <Trash className="size-4" />
           <span>{'Clear all'}</span>
         </button>
       </div>

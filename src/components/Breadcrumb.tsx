@@ -1,12 +1,24 @@
+import { ChevronIcon } from '@videojs/react/icons'
+import { House } from 'lucide-react'
 import Link from 'next/link'
 import { encodeSegments, type QueryMap } from '../utils/drivePath'
-import { FontAwesomeIcon } from '../utils/fontawesome'
 
-const HomeCrumb = () => {
+const crumbClass = (current: boolean) =>
+  `inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 transition-colors ${
+    current
+      ? 'pointer-events-none font-medium text-foreground'
+      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+  }`
+
+const HomeCrumb = ({ current }: { current: boolean }) => {
   return (
-    <Link href="/" className="flex items-center">
-      <FontAwesomeIcon className="h-3 w-3" icon={['far', 'flag']} />
-      <span className="ml-2 font-medium">{'Home'}</span>
+    <Link
+      href="/"
+      className={crumbClass(current)}
+      aria-current={current ? 'page' : undefined}
+    >
+      <House className="size-4" />
+      <span>{'Home'}</span>
     </Link>
   )
 }
@@ -17,7 +29,7 @@ const Breadcrumb: React.FC<{ query?: QueryMap }> = ({ query }) => {
   if (Array.isArray(path)) {
     // Render in reverse so the browser scrolls to the end of the breadcrumb.
     return (
-      <ol className="no-scrollbar inline-flex flex-row-reverse items-center gap-1 overflow-x-scroll text-gray-600 text-sm md:gap-3 dark:text-gray-300">
+      <ol className="no-scrollbar inline-flex min-w-0 flex-row-reverse items-center overflow-x-scroll text-control">
         {path
           .slice()
           .reverse()
@@ -25,30 +37,29 @@ const Breadcrumb: React.FC<{ query?: QueryMap }> = ({ query }) => {
             // Each crumb targets a distinct prefix of the path, so its href is a stable unique key
             const href = `/${encodeSegments(path.slice(0, path.length - i))}`
             return (
-              <li key={href} className="flex flex-shrink-0 items-center">
-                <FontAwesomeIcon className="h-3 w-3" icon="angle-right" />
+              <li key={href} className="flex shrink-0 items-center">
+                <ChevronIcon className="size-3.5 text-muted-foreground" />
                 <Link
                   href={href}
                   passHref
-                  className={`ml-1 transition-all duration-75 hover:opacity-70 md:ml-3 ${
-                    i === 0 ? 'pointer-events-none opacity-80' : ''
-                  }`}
+                  className={crumbClass(i === 0)}
+                  aria-current={i === 0 ? 'page' : undefined}
                 >
                   {p}
                 </Link>
               </li>
             )
           })}
-        <li className="flex-shrink-0 transition-all duration-75 hover:opacity-80">
-          <HomeCrumb />
+        <li className="shrink-0">
+          <HomeCrumb current={false} />
         </li>
       </ol>
     )
   }
 
   return (
-    <div className="text-gray-600 text-sm transition-all duration-75 hover:opacity-80 dark:text-gray-300">
-      <HomeCrumb />
+    <div className="text-control">
+      <HomeCrumb current />
     </div>
   )
 }

@@ -1,9 +1,8 @@
-import '@fortawesome/fontawesome-svg-core/styles.css'
-
 import '../styles/globals.css'
-import '../styles/markdown-github.css'
-import '../utils/fontawesome'
+import '../styles/markdown.css'
 
+import { Tooltip } from '@videojs/react'
+import { LucideProvider } from 'lucide-react'
 import type { NextPage } from 'next'
 import type { AppProps } from 'next/app'
 import type { ReactElement, ReactNode } from 'react'
@@ -15,6 +14,10 @@ type NextPageWithLayout = NextPage & {
 
 function MyApp({ Component, pageProps }: AppProps & { Component: NextPageWithLayout }) {
   const getLayout = Component.getLayout ?? ((page: ReactElement) => page)
-  return getLayout(<Component {...pageProps} />, pageProps)
+  return (
+    <LucideProvider size={18} strokeWidth={2} nonScalingStroke>
+      <Tooltip.Provider>{getLayout(<Component {...pageProps} />, pageProps)}</Tooltip.Provider>
+    </LucideProvider>
+  )
 }
 export default MyApp

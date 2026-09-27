@@ -17,7 +17,7 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
     }
   }, [key])
 
-  const [storedValue, setStoredValue] = useState<T>(readValue)
+  const [storedValue, setStoredValue] = useState<T>(() => initialValueRef.current)
 
   const setValue: SetValue<T> = value => {
     if (typeof window === 'undefined') return
