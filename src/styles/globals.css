@@ -592,6 +592,10 @@
     transition: background-color var(--duration-fast) var(--ease-in-out);
   }
 
+  .hover-list:has(> [data-hover]) {
+    cursor: pointer;
+  }
+
   .hover-list > :is([data-hover], [data-selected]) {
     background-color: var(--color-accent);
   }

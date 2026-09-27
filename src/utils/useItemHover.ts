@@ -53,15 +53,22 @@ export function useItemHover<T extends HTMLElement>() {
       hover(document.elementFromPoint(x, y))
     }
 
+    const onClick = (event: MouseEvent) => {
+      if (!hovered || (event.target !== root && event.target !== hovered)) return
+      hovered.querySelector(':scope > a[href]')?.dispatchEvent(new MouseEvent('click', event))
+    }
+
     document.addEventListener('pointermove', track)
     document.addEventListener('pointerover', onPointerOver)
     document.addEventListener('pointerout', onPointerOut)
     window.addEventListener('scroll', onScroll)
+    root.addEventListener('click', onClick)
     return () => {
       document.removeEventListener('pointermove', track)
       document.removeEventListener('pointerover', onPointerOver)
       document.removeEventListener('pointerout', onPointerOut)
       window.removeEventListener('scroll', onScroll)
+      root.removeEventListener('click', onClick)
       clearTimeout(settle)
       settled()
       hover(null)
