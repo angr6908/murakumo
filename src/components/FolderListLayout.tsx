@@ -5,6 +5,7 @@ import type { OdFolderChildren } from '../types'
 import { getItemPath } from '../utils/drivePath'
 import { formatModifiedDateTime, humanFileSize } from '../utils/fileDetails'
 import { getStoredToken } from '../utils/protectedRouteHandler'
+import { useItemHover } from '../utils/useItemHover'
 import {
   Checkbox,
   ChildIcon,
@@ -36,10 +37,14 @@ const FolderListLayout = (props: FolderLayoutProps) => {
   const { path, folderChildren, selected, toggleItemSelected } = props
   const hashedToken = getStoredToken(path)
   const { t } = useI18n()
+  const listRef = useItemHover<HTMLDivElement>()
 
   return (
     <div className="surface p-1 text-sm sm:rounded-popup">
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-y-0.5 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:gap-x-6">
+      <div
+        ref={listRef}
+        className="hover-list grid grid-cols-[minmax(0,1fr)] gap-y-0.5 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:gap-x-6"
+      >
         <div className="col-span-full mb-0.5 box-content grid h-10 grid-cols-subgrid items-center pb-px separator">
           <div className="pl-2 font-medium text-muted-foreground text-xs">{t('Name')}</div>
           <div className={headerClass}>{t('Last Modified')}</div>
@@ -52,10 +57,10 @@ const FolderListLayout = (props: FolderLayoutProps) => {
 
           return (
             <div
-              className={`col-span-full grid grid-cols-subgrid items-center rounded-item transition-colors duration-(--duration-fast) hover:bg-accent ${
-                selected[c.id] ? 'bg-accent' : ''
-              }`}
+              className="col-span-full grid grid-cols-subgrid items-center"
               key={c.id}
+              data-item
+              data-selected={selected[c.id] || undefined}
             >
               <Link
                 href={itemPath}

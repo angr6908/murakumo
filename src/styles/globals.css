@@ -52,6 +52,7 @@
     --duration-instant: 50ms;
     --duration-fast: 100ms;
     --duration-base: 150ms;
+    --duration-slow: 200ms;
     --duration-slower: 250ms;
     --duration-dialog: 350ms;
     --delay-dialog: 100ms;
@@ -119,6 +120,7 @@
       --default-transition-duration: var(--duration-instant);
       --duration-fast: var(--duration-instant);
       --duration-base: var(--duration-instant);
+      --duration-slow: var(--duration-instant);
       --duration-slower: var(--duration-instant);
       --duration-dialog: var(--duration-instant);
       --delay-dialog: 0s;
@@ -571,20 +573,57 @@
     pointer-events: none;
   }
 
-  @media (hover: hover) {
-    .group:hover .reveal {
-      opacity: 1;
-      scale: 1;
-      filter: none;
-      pointer-events: auto;
-    }
-  }
-
-  .group:focus-within .reveal {
+  .group:is([data-hover], :focus-within) .reveal {
     opacity: 1;
     scale: 1;
     filter: none;
     pointer-events: auto;
+  }
+
+  .hover-list {
+    --item-radius: var(--radius-item);
+    position: relative;
+    anchor-scope: --hover-item;
+  }
+
+  .hover-list > [data-item] {
+    position: relative;
+    border-radius: var(--item-radius);
+    transition: background-color var(--duration-fast) var(--ease-in-out);
+  }
+
+  .hover-list > :is([data-hover], [data-selected]) {
+    background-color: var(--color-accent);
+  }
+
+  @supports (top: anchor(top)) {
+    .hover-list::before {
+      content: "";
+      position: absolute;
+      position-anchor: --hover-item;
+      inset: anchor(inside);
+      overflow-anchor: none;
+      pointer-events: none;
+      border-radius: var(--item-radius);
+      background-color: var(--color-accent);
+      transition: inset var(--duration-fast) ease-in-out;
+    }
+
+    .hover-list > [data-item] {
+      transition-duration: var(--duration-instant);
+    }
+
+    .hover-list > [data-hover] {
+      anchor-name: --hover-item;
+      background-color: transparent;
+      transition-duration: var(--duration-slow);
+    }
+  }
+
+  .hover-list[data-scrolling]::before,
+  .hover-list[data-scrolling] > [data-item],
+  .hover-list[data-scrolling] .reveal {
+    transition-duration: 0s;
   }
 
   .scroll-thin {

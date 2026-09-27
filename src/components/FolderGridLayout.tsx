@@ -7,6 +7,7 @@ import { formatModifiedDateTime } from '../utils/fileDetails'
 import { getBaseUrl } from '../utils/getBaseUrl'
 import { thumbnailUrl } from '../utils/odUrls'
 import { getStoredToken } from '../utils/protectedRouteHandler'
+import { useItemHover } from '../utils/useItemHover'
 import {
   Checkbox,
   ChildIcon,
@@ -66,6 +67,7 @@ const FolderGridLayout = (props: FolderLayoutProps) => {
   const baseUrl = getBaseUrl()
   const itemCount = folderChildren.length
   const { t } = useI18n()
+  const gridRef = useItemHover<HTMLDivElement>()
 
   return (
     <div className="surface p-1 text-sm sm:rounded-popup">
@@ -76,16 +78,14 @@ const FolderGridLayout = (props: FolderLayoutProps) => {
         <SelectedFilesControls {...props} className="flex items-center" selectTitle={t('Select all files')} />
       </div>
 
-      <div className="mt-1 grid grid-cols-2 gap-1 md:grid-cols-4">
+      <div
+        ref={gridRef}
+        className="hover-list mt-1 grid grid-cols-2 gap-1 [--item-radius:var(--radius-popup)] md:grid-cols-4"
+      >
         {folderChildren.map((c: OdFolderChildren) => {
           const itemPath = getItemPath(path, c.name)
           return (
-            <div
-              key={c.id}
-              className={`group relative rounded-popup p-1.5 pb-2 transition-colors duration-(--duration-fast) hover:bg-accent ${
-                selected[c.id] ? 'bg-accent' : ''
-              }`}
-            >
+            <div key={c.id} className="group relative p-1.5 pb-2" data-item data-selected={selected[c.id] || undefined}>
               <div className="reveal surface-controls absolute top-2.5 right-2.5 z-10 flex rounded-full">
                 <FolderChildActions
                   {...props}

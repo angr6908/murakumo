@@ -1,0 +1,72 @@
+import { useEffect, useRef } from 'react'
+
+export function useItemHover<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+
+  useEffect(() => {
+    const root = ref.current
+    if (!root) return
+
+    let x = 0
+    let y = 0
+    let tracking = false
+    let settle = 0
+    let hovered: Element | null = null
+
+    const hover = (target: EventTarget | null) => {
+      if (target === root) return
+      const item = target instanceof Element ? target.closest('[data-item]') : null
+      const next = item && root.contains(item) ? item : null
+      if (next === hovered) return
+      hovered?.removeAttribute('data-hover')
+      next?.setAttribute('data-hover', '')
+      hovered = next
+    }
+
+    const track = (event: PointerEvent) => {
+      tracking = event.pointerType !== 'touch'
+      x = event.clientX
+      y = event.clientY
+    }
+
+    const onPointerOver = (event: PointerEvent) => {
+      track(event)
+      hover(tracking ? event.target : null)
+    }
+
+    const onPointerOut = (event: PointerEvent) => {
+      if (event.relatedTarget) return
+      tracking = false
+      hover(null)
+    }
+
+    const settled = () => {
+      settle = 0
+      root.removeAttribute('data-scrolling')
+    }
+
+    const onScroll = () => {
+      if (!tracking) return hover(null)
+      if (settle) clearTimeout(settle)
+      else root.setAttribute('data-scrolling', '')
+      settle = window.setTimeout(settled, 150)
+      hover(document.elementFromPoint(x, y))
+    }
+
+    document.addEventListener('pointermove', track)
+    document.addEventListener('pointerover', onPointerOver)
+    document.addEventListener('pointerout', onPointerOut)
+    window.addEventListener('scroll', onScroll)
+    return () => {
+      document.removeEventListener('pointermove', track)
+      document.removeEventListener('pointerover', onPointerOver)
+      document.removeEventListener('pointerout', onPointerOut)
+      window.removeEventListener('scroll', onScroll)
+      clearTimeout(settle)
+      settled()
+      hover(null)
+    }
+  }, [])
+
+  return ref
+}
