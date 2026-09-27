@@ -18,6 +18,7 @@ const healthyAhead = 5
 const maxSkip = 1 << 20
 const minWindow = 4 << 20
 const maxWindow = 32 << 20
+const locateWindow = 16 << 20
 
 type Source = { url: string; refresh: () => Promise<boolean> }
 
@@ -273,11 +274,11 @@ const bufferedRange = (sourceBuffer: SourceBuffer, time: number) => {
   return undefined
 }
 
-async function readCachedIndex(key: string, size: number) {
+async function readCachedIndex(key: string, size?: number) {
   try {
     const hit = await (await caches.open(indexCacheName)).match(key)
     const buffer = hit && (await hit.arrayBuffer())
-    return buffer && buffer.byteLength === size ? buffer : undefined
+    return buffer && (size === undefined || buffer.byteLength === size) ? buffer : undefined
   } catch {
     return undefined
   }
@@ -292,10 +293,35 @@ async function storeIndex(key: string, buffer: ArrayBuffer) {
   } catch {}
 }
 
+async function locateIndex(stream: RangeStream) {
+  for (let hops = 0; hops < 16; hops++) {
+    const offset = stream.position
+    const head = await stream.read(8)
+    const type = String.fromCharCode(...head.subarray(4, 8))
+    let size = new DataView(head.buffer).getUint32(0)
+    let large: Uint8Array | undefined
+    if (size === 1) {
+      large = await stream.read(8)
+      size = Number(new DataView(large.buffer).getBigUint64(0))
+    }
+    const header = large ? 16 : 8
+    if (size < header) break
+    if (type === 'moov') {
+      const index = new Uint8Array(size)
+      index.set(head)
+      if (large) index.set(large, 8)
+      index.set(await stream.read(size - header), header)
+      return index.buffer
+    }
+    await stream.skipTo(offset + size)
+  }
+  throw new Error('MP4 index not found')
+}
+
 export async function playMp4WithMse(
   video: HTMLVideoElement,
   url: string,
-  probe: Mp4Probe,
+  probe: Mp4Probe | undefined,
   options: {
     startTime: number
     resume: boolean
@@ -316,8 +342,12 @@ export async function playMp4WithMse(
       return true
     },
   }
-  const cached = options.cacheKey ? await readCachedIndex(options.cacheKey, probe.moov.size) : undefined
-  const initial = cached ? undefined : new RangeStream(source, probe.moov.offset, probe.moov.size + minWindow)
+  const cached = options.cacheKey ? await readCachedIndex(options.cacheKey, probe?.moov.size) : undefined
+  const initial = cached
+    ? undefined
+    : probe
+      ? new RangeStream(source, probe.moov.offset, probe.moov.size + minWindow)
+      : new RangeStream(source, 0, locateWindow)
   options.signal.addEventListener('abort', () => initial?.cancel(), { once: true })
   let reusable: RangeStream | undefined = initial
   const supported = (kind: string, track: Mp4Track) =>
@@ -325,7 +355,8 @@ export async function playMp4WithMse(
 
   let movie: ReturnType<typeof parseMoov>
   try {
-    const index = cached ?? (await (initial as RangeStream).read(probe.moov.size)).buffer
+    const stream = initial as RangeStream
+    const index = cached ?? (probe ? (await stream.read(probe.moov.size)).buffer : await locateIndex(stream))
     movie = parseMoov(index)
     if (!cached && options.cacheKey) void storeIndex(options.cacheKey, index)
   } catch (error) {

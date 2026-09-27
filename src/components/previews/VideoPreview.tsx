@@ -34,9 +34,10 @@ const VideoPlayerView: FC<{
   isFlv: boolean
   mpegts: any
   probeUrl?: string
+  multiAudio: boolean
   refreshUrl: string
   onResize: (size: { width: number; height: number }) => void
-}> = ({ videoName, videoUrl, ratio, thumbnail, subtitle, isFlv, mpegts, probeUrl, refreshUrl, onResize }) => {
+}> = ({ videoName, videoUrl, ratio, thumbnail, subtitle, isFlv, mpegts, probeUrl, multiAudio, refreshUrl, onResize }) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioLabelsRef = useRef<ReturnType<typeof labelAudioTracks>>(undefined)
   const wasWaitingRef = useRef(false)
@@ -45,17 +46,19 @@ const VideoPlayerView: FC<{
   const [mseFailedUrl, setMseFailedUrl] = useState<string>()
 
   const canUseMse = hasMediaSource() && !hasNativeAudioTracks()
+  const hinted = Boolean(multiAudio && probeUrl && canUseMse && !isFlv)
   const probeResult = probe && probe.url === probeUrl ? probe.value : undefined
-  const waiting = Boolean(probeUrl && canUseMse && !isFlv && probeResult === undefined)
+  const waiting = Boolean(probeUrl && canUseMse && !isFlv && !hinted && probeResult === undefined)
   const videoCodec = probeResult?.tracks.find(track => track.type === 'vide')?.codec
   const useMse = Boolean(
     canUseMse &&
       !isFlv &&
-      probeResult?.moov &&
-      !probeResult.fragmented &&
-      probeResult.tracks.filter(track => track.type === 'soun').length > 1 &&
       mseFailedUrl !== videoUrl &&
-      (!videoCodec || MediaSource.isTypeSupported(`video/mp4; codecs="${videoCodec}"`)),
+      (hinted ||
+        (probeResult?.moov &&
+          !probeResult.fragmented &&
+          probeResult.tracks.filter(track => track.type === 'soun').length > 1 &&
+          (!videoCodec || MediaSource.isTypeSupported(`video/mp4; codecs="${videoCodec}"`)))),
   )
 
   const attachVideo = useCallback((video: HTMLVideoElement | null) => {
@@ -132,7 +135,7 @@ const VideoPlayerView: FC<{
   }, [videoUrl, isFlv, mpegts])
 
   useEffect(() => {
-    if (!probeUrl) return
+    if (!probeUrl || hinted) return
     const controller = new AbortController()
     let settled = false
     const settle = (value: Mp4Probe | null) => {
@@ -149,7 +152,7 @@ const VideoPlayerView: FC<{
       clearTimeout(timer)
       controller.abort()
     }
-  }, [probeUrl])
+  }, [probeUrl, hinted])
 
   useEffect(() => {
     if (probeResult?.tracks) audioLabelsRef.current?.setNames(probeResult.tracks)
@@ -168,7 +171,7 @@ const VideoPlayerView: FC<{
 
   useEffect(() => {
     const video = videoRef.current
-    if (!useMse || !video || !probeResult) return
+    if (!useMse || !video) return
     const controller = new AbortController()
     let destroy: (() => void) | undefined
     const startTime = video.currentTime
@@ -177,7 +180,7 @@ const VideoPlayerView: FC<{
       video.removeAttribute('src')
       video.load()
     }
-    playMp4WithMse(video, videoUrl, probeResult, {
+    playMp4WithMse(video, videoUrl, probeResult?.moov ? probeResult : undefined, {
       startTime,
       resume,
       refreshUrl,
@@ -281,6 +284,7 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
           isFlv={isFlv}
           mpegts={mpegts}
           probeUrl={probeUrl}
+          multiAudio={file.name.includes('AAC×2')}
           refreshUrl={videoUrl}
           onResize={({ width, height }) => setMeasured({ url: playbackUrl, width, height })}
         />
