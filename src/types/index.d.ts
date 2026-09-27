@@ -27,6 +27,7 @@ export type OdFileObject = OdDriveItemBase & {
   '@odata.context': string
   '@microsoft.graph.downloadUrl'?: string
   file: { mimeType: string; hashes: { quickXorHash: string; sha1Hash?: string; sha256Hash?: string } }
+  thumbnails?: { large?: { width: number; height: number; url: string } }[]
 }
 // A representation of a OneDrive image file. Some images do not return a width and height, so types are optional.
 export type OdImageFile = {

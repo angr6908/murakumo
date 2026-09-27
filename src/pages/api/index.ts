@@ -11,6 +11,7 @@ import {
   verifyProtectedPath,
 } from '../../utils/apiRoute'
 import { isNotPersonalVaultItem } from '../../utils/drivePath'
+import { getFileCategory } from '../../utils/fileType'
 import { get, isHttpError } from '../../utils/http'
 import { revealObfuscatedToken } from '../../utils/oAuthHandler'
 import { storeOdAuthTokens } from '../../utils/odAuthTokenStore'
@@ -122,9 +123,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    const isAudio = getFileCategory(cleanPath.split('.').pop()?.toLowerCase() ?? '') === 'audio'
     const { data: identityData } = await get(requestUrl, {
       headers: graphHeaders(accessToken),
-      params: { select: fileItemSelect },
+      params: { select: fileItemSelect, ...(isAudio ? { $expand: 'thumbnails(select=large)' } : {}) },
     })
 
     if ('folder' in identityData) {

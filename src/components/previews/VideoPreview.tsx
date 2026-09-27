@@ -1,3 +1,4 @@
+import { Hotkey } from '@videojs/react'
 import { Video, VideoPlayer, VideoSkin } from '@videojs/react/video'
 import { type FC, useCallback, useEffect, useRef, useState } from 'react'
 import { useAsync } from 'react-async-hook'
@@ -21,6 +22,23 @@ import '@videojs/react/video/skin.css'
 const maxPlayerHeight = 'max(15rem, 100svh - 8rem)'
 const probeTimeout = 2500
 const mp4Extensions = new Set(['mp4', 'm4v', 'mov'])
+const documentHotkeys = [
+  { keys: 'Space', action: 'togglePaused' },
+  { keys: 'k', action: 'togglePaused' },
+  { keys: 'm', action: 'toggleMuted' },
+  { keys: 'ArrowRight', action: 'seekStep' },
+  { keys: 'ArrowLeft', action: 'seekStep' },
+  { keys: 'l', action: 'seekStep' },
+  { keys: 'j', action: 'seekStep' },
+  { keys: 'ArrowUp', action: 'volumeStep' },
+  { keys: 'ArrowDown', action: 'volumeStep' },
+  { keys: '0-9', action: 'seekToPercent' },
+  { keys: 'Home', action: 'seekToPercent', value: 0 },
+  { keys: 'End', action: 'seekToPercent', value: 100 },
+  { keys: 'f', action: 'toggleFullscreen' },
+  { keys: 'c', action: 'toggleSubtitles' },
+  { keys: 'i', action: 'togglePictureInPicture' },
+] as const
 
 const hasNativeAudioTracks = () => typeof HTMLMediaElement !== 'undefined' && 'audioTracks' in HTMLMediaElement.prototype
 const hasMediaSource = () => typeof MediaSource !== 'undefined'
@@ -67,46 +85,17 @@ const VideoPlayerView: FC<{
   }, [])
 
   useEffect(() => {
-    const player = () => videoRef.current?.closest<HTMLElement>('.media-container')
-    const ownsFocus = (element: Element | null) =>
-      Boolean(
-        element?.closest(
-          'input, textarea, select, [contenteditable="true"], [role="menu"], [role="menuitem"], [role="menuitemradio"], [role="listbox"], [role="dialog"]',
-        ),
-      )
-    const focusPlayer = () => {
-      const container = player()
-      const active = document.activeElement
-      if (!container || active === container || ownsFocus(active) || active?.getAttribute('aria-expanded') === 'true') return
-      container.focus({ preventScroll: true })
-    }
-    let pointer = false
-    const onPointerDown = () => {
-      pointer = true
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Tab') pointer = false
-    }
     const onClick = (event: MouseEvent) => {
-      const target = event.target as Element
-      if (event.detail === 0 || ownsFocus(target) || target.closest('[aria-haspopup]')) return
-      requestAnimationFrame(focusPlayer)
+      if (event.detail === 0) return
+      requestAnimationFrame(() => {
+        const active = document.activeElement
+        if (!(active instanceof HTMLElement) || !active.matches('button, [role="slider"]')) return
+        if (active.closest('[role="menu"], [role="dialog"], [aria-expanded="true"]')) return
+        active.blur()
+      })
     }
-    const onFocusIn = (event: FocusEvent) => {
-      const target = event.target as Element
-      if (pointer && target.matches('button') && player()?.contains(target)) requestAnimationFrame(focusPlayer)
-    }
-    focusPlayer()
-    document.addEventListener('pointerdown', onPointerDown, true)
-    document.addEventListener('keydown', onKeyDown, true)
     document.addEventListener('click', onClick, true)
-    document.addEventListener('focusin', onFocusIn, true)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown, true)
-      document.removeEventListener('keydown', onKeyDown, true)
-      document.removeEventListener('click', onClick, true)
-      document.removeEventListener('focusin', onFocusIn, true)
-    }
+    return () => document.removeEventListener('click', onClick, true)
   }, [])
 
   useEffect(() => {
@@ -218,6 +207,15 @@ const VideoPlayerView: FC<{
         >
           {subtitleUrl && <track kind="captions" label={videoName} src={subtitleUrl} default />}
         </Video>
+        {documentHotkeys.map(hotkey => (
+          <Hotkey
+            key={hotkey.keys}
+            keys={hotkey.keys}
+            action={hotkey.action}
+            value={'value' in hotkey ? hotkey.value : undefined}
+            target="document"
+          />
+        ))}
       </VideoSkin>
     </VideoPlayer>
   )
