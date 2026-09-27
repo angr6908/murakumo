@@ -421,11 +421,11 @@ export async function playMp4WithMse(
   const offsetOf = (track: Mp4Track) => track.presentationOffset + shift
   const toSeconds = (track: Mp4Track, time: number) => time / track.timescale + offsetOf(track)
   const toMedia = (track: Mp4Track, seconds: number) => Math.max(0, (seconds - offsetOf(track)) * track.timescale)
+  let chapterStarts: number[] = []
   const emitChapters = (chapters: Mp4Chapter[]) => {
-    const vtt = chaptersVtt(
-      chapters.map(chapter => ({ ...chapter, start: chapter.start + shift })),
-      movie.duration / movie.timescale + shift,
-    )
+    const shifted = chapters.map(chapter => ({ ...chapter, start: chapter.start + shift }))
+    chapterStarts = shifted.map(chapter => chapter.start)
+    const vtt = chaptersVtt(shifted, movie.duration / movie.timescale + shift)
     if (vtt && !options.signal.aborted) options.onChapters?.(vtt)
   }
   if (movie.chapters.length > 0) emitChapters(movie.chapters)
@@ -729,6 +729,7 @@ export async function playMp4WithMse(
     toSeconds(videoTrack, videoTrack.sampleDts(sample) + videoTrack.sampleCtsOffset(sample))
 
   const snapTarget = (time: number) => {
+    if (chapterStarts.some(start => Math.abs(time - start) < 0.01)) return time
     const sample = videoTrack.sampleAtTime(toMedia(videoTrack, time))
     const before = presentation(videoTrack.syncSampleAtOrBefore(sample))
     const nextSync = videoTrack.nextSyncSample(sample)

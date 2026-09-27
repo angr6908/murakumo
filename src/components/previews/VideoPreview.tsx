@@ -21,6 +21,7 @@ import '@videojs/react/video/skin.css'
 
 const maxPlayerHeight = 'max(15rem, 100svh - 8rem)'
 const probeTimeout = 2500
+const chapterMagnet = 8
 const mp4Extensions = new Set(['mp4', 'm4v', 'mov'])
 const documentHotkeys = [
   { keys: 'Space', action: 'togglePaused' },
@@ -97,6 +98,25 @@ const VideoPlayerView: FC<{
     }
     document.addEventListener('click', onClick, true)
     return () => document.removeEventListener('click', onClick, true)
+  }, [])
+
+  useEffect(() => {
+    const video = videoRef.current
+    const skin = video?.closest<HTMLElement>('.video-skin')
+    if (!video || !skin) return
+    const onPointer = (event: PointerEvent) => {
+      const slider = event.target instanceof Element ? event.target.closest('.media-time-slider') : null
+      const cues = Array.from(video.textTracks).find(track => track.kind === 'chapters')?.cues
+      if (!slider || !cues?.length || !Number.isFinite(video.duration) || video.duration <= 0) return
+      const rect = slider.getBoundingClientRect()
+      const nearest = Array.from(cues, cue => rect.left + ((cue.startTime + 0.001) / video.duration) * rect.width).reduce(
+        (best, x) => (Math.abs(x - event.clientX) < Math.abs(best - event.clientX) ? x : best),
+      )
+      if (Math.abs(nearest - event.clientX) <= chapterMagnet) Object.defineProperty(event, 'clientX', { value: nearest })
+    }
+    const types = ['pointerdown', 'pointermove', 'pointerup'] as const
+    types.forEach(type => skin.addEventListener(type, onPointer, true))
+    return () => types.forEach(type => skin.removeEventListener(type, onPointer, true))
   }, [])
 
   useEffect(() => {
