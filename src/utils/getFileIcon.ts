@@ -1,44 +1,45 @@
 import {
+  Archive,
   BookOpen,
+  Clapperboard,
+  CodeXml,
   File,
-  FileArchive,
-  FileCode,
-  FileImage,
-  FileMusic,
-  FilePenLine,
-  FileSpreadsheet,
-  FileText,
-  FileType,
-  FileVideoCamera,
+  Hash,
+  Image,
   Link,
   type LucideIcon,
+  Music,
+  NotebookText,
   Presentation,
+  ScrollText,
+  Sheet,
+  TextAlignStart,
 } from 'lucide-react'
 import { extensionCategory, type FileCategory } from './fileType'
 
 const iconForCategory: Record<FileCategory, LucideIcon> = {
-  image: FileImage,
-  pdf: FileType,
-  office: FileText,
-  markdown: FilePenLine,
-  code: FileCode,
-  text: FileText,
-  video: FileVideoCamera,
-  audio: FileMusic,
+  image: Image,
+  pdf: ScrollText,
+  office: NotebookText,
+  markdown: Hash,
+  code: CodeXml,
+  text: TextAlignStart,
+  video: Clapperboard,
+  audio: Music,
   epub: BookOpen,
   book: BookOpen,
   url: Link,
-  archive: FileArchive,
+  archive: Archive,
 }
 
 // Office documents have distinct icons per actual format, so resolve them before the category.
 const officeIconBySubtype: Record<string, LucideIcon> = {
-  doc: FileText,
-  docx: FileText,
+  doc: NotebookText,
+  docx: NotebookText,
   ppt: Presentation,
   pptx: Presentation,
-  xls: FileSpreadsheet,
-  xlsx: FileSpreadsheet,
+  xls: Sheet,
+  xlsx: Sheet,
 }
 
 export function getRawExtension(fileName: string): string {
