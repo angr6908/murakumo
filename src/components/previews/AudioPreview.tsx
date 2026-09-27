@@ -1,5 +1,6 @@
 import { selectPlayback, usePlayer } from '@videojs/react'
 import { Audio, AudioPlayer, AudioSkin } from '@videojs/react/audio'
+import { Music } from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
 
 import type { OdFileObject } from '../../types'
@@ -16,7 +17,8 @@ import '@videojs/react/audio/skin.css'
 const Cover: FC<{ src?: string; alt: string; wide: boolean }> = ({ src, alt, wide }) => {
   const playback = usePlayer(selectPlayback)
   const [missing, setMissing] = useState(false)
-  if (missing) return null
+  const [loaded, setLoaded] = useState(false)
+  const fade = 'transition-opacity duration-(--duration-slower)'
 
   return (
     <div
@@ -24,7 +26,21 @@ const Cover: FC<{ src?: string; alt: string; wide: boolean }> = ({ src, alt, wid
         wide ? 'aspect-video w-full max-w-80 sm:h-56 sm:w-auto sm:max-w-none' : 'size-48 sm:size-56'
       }`}
     >
-      {src && <img className="size-full object-cover" src={src} alt={alt} decoding="async" onError={() => setMissing(true)} />}
+      <div
+        className={`absolute inset-0 grid place-items-center text-muted-foreground ${fade} ${loaded ? 'opacity-0' : ''}`}
+      >
+        <Music className="size-12" />
+      </div>
+      {src && !missing && (
+        <img
+          className={`relative size-full object-cover ${fade} ${loaded ? '' : 'opacity-0'}`}
+          src={src}
+          alt={alt}
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          onError={() => setMissing(true)}
+        />
+      )}
       {playback?.waiting && (
         <div className="absolute inset-0 grid place-items-center bg-backdrop/35 text-white [backdrop-filter:var(--backdrop-filter-indicator)]">
           <Spinner />
