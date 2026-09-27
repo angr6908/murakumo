@@ -40,7 +40,7 @@ const FolderListLayout = (props: FolderLayoutProps) => {
   return (
     <div className="surface p-1 text-sm sm:rounded-popup">
       <div className="grid grid-cols-[minmax(0,1fr)] gap-y-0.5 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:gap-x-6">
-        <div className="col-span-full grid h-10 grid-cols-subgrid items-center separator">
+        <div className="col-span-full mb-0.5 box-content grid h-10 grid-cols-subgrid items-center pb-px separator">
           <div className="pl-2 font-medium text-muted-foreground text-xs">{t('Name')}</div>
           <div className={headerClass}>{t('Last Modified')}</div>
           <div className={`${headerClass} text-right`}>{t('Size')}</div>

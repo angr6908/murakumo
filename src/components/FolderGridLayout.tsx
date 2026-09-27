@@ -69,7 +69,7 @@ const FolderGridLayout = (props: FolderLayoutProps) => {
 
   return (
     <div className="surface p-1 text-sm sm:rounded-popup">
-      <div className="flex h-10 items-center pr-1 pl-2 separator">
+      <div className="box-content flex h-10 items-center pr-1 pb-px pl-2 separator">
         <div className="flex-1 font-medium text-muted-foreground text-xs tabular-nums">
           {t('{{count}} items', { count: itemCount })}
         </div>
