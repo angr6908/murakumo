@@ -1,16 +1,23 @@
 import { initSegment, type Mp4Sample, mediaSegment } from './fmp4'
 import { chunksFrom, type Mp4Probe, type Mp4Track, parseMoov } from './mp4'
 
-type AudioStore = { samples: Mp4Sample[]; appended: number }
+type StoredSample = Mp4Sample & { index: number }
+type AudioStore = { samples: StoredSample[]; appended: number }
 type Session = { aborted: boolean; target: number; start: number; end: number; stream?: RangeStream; wake?: () => void }
 type AudioTrackEntry = { id: string; kind: string; label: string; language: string; enabled: boolean }
 
-const forwardBuffer = 30
-const backBuffer = 20
+const forwardBuffer = 120
+const backBuffer = 120
+const snapAhead = 3
+const indexCacheName = 'murakumo-mp4-index'
+const indexCacheLimit = 10
 const firstFlushFrames = 8
 const flushFrames = 30
 const switchLead = 0.3
+const healthyAhead = 5
 const maxSkip = 1 << 20
+const minWindow = 4 << 20
+const maxWindow = 32 << 20
 
 type Source = { url: string; refresh: () => Promise<boolean> }
 
@@ -19,22 +26,31 @@ const expiredStatus = new Set([401, 403, 404, 410])
 class RangeStream {
   readonly #source: Source
   readonly #controller = new AbortController()
-  #reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+  #reader: ReadableStreamDefaultReader<Uint8Array> | null | undefined
+  #next: Promise<ReadableStreamDefaultReader<Uint8Array> | null> | undefined
+  #nextStart: number
+  #firstWindow: number
   #chunks: Uint8Array[] = []
   #head = 0
   #queued = 0
   #retries = 0
+  #windowBytes = 0
+  #windowLength = 0
+  #pendingLength = 0
+  windowSize = minWindow
   position: number
 
-  constructor(source: Source, position: number) {
+  constructor(source: Source, position: number, firstWindow = minWindow) {
     this.#source = source
     this.position = position
+    this.#nextStart = position
+    this.#firstWindow = firstWindow
   }
 
-  async #open() {
+  async #request(start: number, length: number) {
     const request = () =>
       fetch(this.#source.url, {
-        headers: { Range: `bytes=${this.position + this.#queued}-` },
+        headers: { Range: `bytes=${start}-${start + length - 1}` },
         signal: this.#controller.signal,
       })
     let resp = await request()
@@ -42,6 +58,7 @@ class RangeStream {
       await resp.body?.cancel()
       resp = await request()
     }
+    if (resp.status === 416) return null
     if (resp.status !== 206 || !resp.body) {
       await resp.body?.cancel()
       throw new Error(`Range request failed: ${resp.status}`)
@@ -49,18 +66,48 @@ class RangeStream {
     return resp.body.getReader()
   }
 
+  #schedule() {
+    const length = this.#firstWindow || this.windowSize
+    this.#firstWindow = 0
+    const start = this.#nextStart
+    this.#nextStart += length
+    this.#pendingLength = length
+    const next = this.#request(start, length)
+    next.catch(() => {})
+    return next
+  }
+
+  #discard() {
+    void this.#reader?.cancel().catch(() => {})
+    void this.#next?.then(reader => reader?.cancel()).catch(() => {})
+    this.#reader = undefined
+    this.#next = undefined
+  }
+
   async #pull() {
     try {
-      this.#reader ??= await this.#open()
+      if (this.#reader === undefined) {
+        this.#reader = await (this.#next ?? this.#schedule())
+        this.#next = undefined
+        this.#windowBytes = 0
+        this.#windowLength = this.#pendingLength
+      }
+      if (this.#reader === null) return false
       const { done, value } = await this.#reader.read()
-      if (done) return false
+      if (done) {
+        this.#reader = this.#windowBytes === 0 ? null : undefined
+        return this.#windowBytes > 0
+      }
+      this.#windowBytes += value.length
+      if (!this.#next && this.#windowBytes >= this.#windowLength / 2) this.#next = this.#schedule()
       this.#chunks.push(value)
       this.#queued += value.length
       this.#retries = 0
       return true
     } catch (error) {
       if (this.#controller.signal.aborted || this.#retries++ >= 3) throw error
-      this.#reader = undefined
+      this.#discard()
+      this.#nextStart = this.position + this.#queued
       await new Promise(resolve => setTimeout(resolve, 500 * this.#retries))
       return true
     }
@@ -108,12 +155,12 @@ class RangeStream {
     const distance = offset - this.position
     if (distance < 0) throw new Error('Cannot skip backwards')
     if (distance > this.#queued + maxSkip) {
-      await this.#reader?.cancel().catch(() => {})
-      this.#reader = undefined
+      this.#discard()
       this.#chunks = []
       this.#head = 0
       this.#queued = 0
       this.position = offset
+      this.#nextStart = offset
       return
     }
     await this.#ensure(distance)
@@ -226,6 +273,25 @@ const bufferedRange = (sourceBuffer: SourceBuffer, time: number) => {
   return undefined
 }
 
+async function readCachedIndex(key: string, size: number) {
+  try {
+    const hit = await (await caches.open(indexCacheName)).match(key)
+    const buffer = hit && (await hit.arrayBuffer())
+    return buffer && buffer.byteLength === size ? buffer : undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function storeIndex(key: string, buffer: ArrayBuffer) {
+  try {
+    const cache = await caches.open(indexCacheName)
+    await cache.put(key, new Response(buffer.slice(0)))
+    const keys = await cache.keys()
+    for (const old of keys.slice(0, Math.max(0, keys.length - indexCacheLimit))) await cache.delete(old)
+  } catch {}
+}
+
 export async function playMp4WithMse(
   video: HTMLVideoElement,
   url: string,
@@ -234,6 +300,7 @@ export async function playMp4WithMse(
     startTime: number
     resume: boolean
     refreshUrl?: string
+    cacheKey?: string
     signal: AbortSignal
     onError: (error: unknown) => void
   },
@@ -249,28 +316,35 @@ export async function playMp4WithMse(
       return true
     },
   }
-  const initial = new RangeStream(source, probe.moov.offset)
-  options.signal.addEventListener('abort', () => initial.cancel(), { once: true })
+  const cached = options.cacheKey ? await readCachedIndex(options.cacheKey, probe.moov.size) : undefined
+  const initial = cached ? undefined : new RangeStream(source, probe.moov.offset, probe.moov.size + minWindow)
+  options.signal.addEventListener('abort', () => initial?.cancel(), { once: true })
   let reusable: RangeStream | undefined = initial
   const supported = (kind: string, track: Mp4Track) =>
     Boolean(track.codec && track.orderedChunks && MediaSource.isTypeSupported(`${kind}/mp4; codecs="${track.codec}"`))
 
   let movie: ReturnType<typeof parseMoov>
   try {
-    movie = parseMoov((await initial.read(probe.moov.size)).buffer)
+    const index = cached ?? (await (initial as RangeStream).read(probe.moov.size)).buffer
+    movie = parseMoov(index)
+    if (!cached && options.cacheKey) void storeIndex(options.cacheKey, index)
   } catch (error) {
-    initial.cancel()
+    initial?.cancel()
     throw error
   }
   options.signal.throwIfAborted()
   const videoTrack = movie.tracks.find(track => track.type === 'vide' && supported('video', track))
   const audioTracks = movie.tracks.filter(track => track.type === 'soun' && supported('audio', track))
   if (movie.fragmented || !videoTrack || audioTracks.length === 0) {
-    initial.cancel()
+    initial?.cancel()
     throw new Error('MP4 is not playable through MediaSource')
   }
 
   const tracks = [videoTrack, ...audioTracks]
+  const lastOffset = Math.max(...tracks.map(track => track.chunkOffset(track.chunkCount - 1)))
+  const bytesPerSecond = lastOffset / Math.max(1, movie.duration / movie.timescale)
+  const windowSize = Math.min(maxWindow, Math.max(minWindow, Math.round(bytesPerSecond * 10)))
+  if (initial) initial.windowSize = windowSize
   const shift = Math.max(0, -videoTrack.presentationOffset)
   const offsetOf = (track: Mp4Track) => track.presentationOffset + shift
   const toSeconds = (track: Mp4Track, time: number) => time / track.timescale + offsetOf(track)
@@ -281,6 +355,8 @@ export async function playMp4WithMse(
   let destroyed = false
   let session: Session | undefined
   let playhead = 0
+  let lead: { start: number; end: number } | undefined
+  let forwardLimit = forwardBuffer
   let audioLock: Promise<void> = Promise.resolve()
   let markReady = () => {}
   const ready = new Promise<void>(resolve => {
@@ -304,17 +380,32 @@ export async function playMp4WithMse(
       const previous = active
       active = next
       list.dispatchEvent(new Event('change'))
-      const from = video.paused ? video.currentTime : video.currentTime + switchLead
+      const now = video.currentTime
+      const unplayed = lead && lead.end > now ? lead.end : Number.POSITIVE_INFINITY
+      const from = Math.min(video.paused ? now : now + switchLead, unplayed)
+      const behind = Math.max(0, now - 0.05)
+      lead = from > behind ? { start: behind, end: from } : undefined
+      await audioQueue.remove(0, behind)
       await audioQueue.remove(from, mediaSource.duration)
       if (next.codec !== previous.codec) await audioQueue.changeType(`audio/mp4; codecs="${next.codec}"`)
       await audioQueue.setOffset(offsetOf(next))
       await audioQueue.append(initSegment(next))
       const store = stores.get(next) as AudioStore
-      const fromMedia = toMedia(next, from)
-      const index = store.samples.findIndex(sample => sample.dts + sample.duration > fromMedia)
-      const replay = index === -1 ? [] : store.samples.slice(index)
+      const runs = audioRuns(next, (start, end) => (start < behind || end > from) && videoCovers(start, end))
       store.appended = store.samples.length
-      if (replay.length > 0) await appendWithEviction(audioQueue, mediaSegment(next.id, sequence++, replay))
+      await appendRuns(next, runs)
+    }).catch(fail)
+
+  const repairLead = () =>
+    withAudio(async () => {
+      const region = lead
+      if (!region || destroyed) return
+      lead = undefined
+      await audioQueue.remove(region.start, region.end)
+      await appendRuns(
+        active,
+        audioRuns(active, (start, end) => start < region.end && end > region.start && videoCovers(start, end)),
+      )
     }).catch(fail)
 
   const list = new MseAudioTrackList(
@@ -347,25 +438,68 @@ export async function playMp4WithMse(
   void audioQueue.append(initSegment(active)).catch(fail)
   markReady()
 
+  const videoCovers = (start: number, end: number) => {
+    const { buffered } = videoQueue.sourceBuffer
+    for (let index = 0; index < buffered.length; index++) {
+      if (start < buffered.end(index) && end > buffered.start(index)) return true
+    }
+    return false
+  }
+
+  const audioRuns = (track: Mp4Track, wanted: (start: number, end: number) => boolean) => {
+    const unique = new Map<number, StoredSample>()
+    for (const sample of (stores.get(track) as AudioStore).samples) unique.set(sample.index, sample)
+    const runs: StoredSample[][] = []
+    let run: StoredSample[] = []
+    for (const sample of [...unique.values()].sort((a, b) => a.index - b.index)) {
+      const include = wanted(toSeconds(track, sample.dts), toSeconds(track, sample.dts + sample.duration))
+      const previous = run[run.length - 1]
+      if (!include || (previous && sample.index !== previous.index + 1)) {
+        if (run.length > 0) runs.push(run)
+        run = []
+      }
+      if (include) run.push(sample)
+    }
+    if (run.length > 0) runs.push(run)
+    return runs
+  }
+
+  const appendRuns = async (track: Mp4Track, runs: StoredSample[][]) => {
+    for (const run of runs) await appendWithEviction(audioQueue, mediaSegment(track.id, sequence++, run))
+  }
+
   const trimBuffers = async (keep: number) => {
     if (keep <= 0) return
     await Promise.all([videoQueue.remove(0, keep), audioQueue.remove(0, keep)])
   }
 
-  const appendWithEviction = async (queue: BufferQueue, data: Uint8Array<ArrayBuffer>) => {
-    try {
-      await queue.append(data)
-    } catch (error) {
-      if ((error as DOMException)?.name !== 'QuotaExceededError') throw error
-      await trimBuffers(video.currentTime - 5)
-      await queue.append(data)
+  const nextPlaybackEvent = () =>
+    new Promise<void>(resolve => {
+      const done = () => {
+        for (const type of ['timeupdate', 'seeking', 'emptied']) video.removeEventListener(type, done)
+        resolve()
+      }
+      for (const type of ['timeupdate', 'seeking', 'emptied']) video.addEventListener(type, done)
+    })
+
+  const appendWithEviction = async (queue: BufferQueue, data: Uint8Array<ArrayBuffer>, current?: Session) => {
+    for (let attempt = 0; !current?.aborted; attempt++) {
+      try {
+        await queue.append(data)
+        return
+      } catch (error) {
+        if ((error as DOMException)?.name !== 'QuotaExceededError' || destroyed) throw error
+        forwardLimit = Math.max(10, Math.min(forwardLimit, ahead() - 5))
+        await trimBuffers(video.currentTime - 5)
+        if (attempt > 0) await nextPlaybackEvent()
+      }
     }
   }
 
   const flush = async (current: Session, samples: Mp4Sample[]) => {
     if (current.aborted) return
     if (samples.length > 0) {
-      await appendWithEviction(videoQueue, mediaSegment(videoTrack.id, sequence++, samples))
+      await appendWithEviction(videoQueue, mediaSegment(videoTrack.id, sequence++, samples), current)
       const last = samples[samples.length - 1]
       current.end = toSeconds(videoTrack, last.dts + last.duration)
     }
@@ -374,13 +508,13 @@ export async function playMp4WithMse(
       const store = stores.get(active) as AudioStore
       const next = store.samples.slice(store.appended)
       store.appended = store.samples.length
-      if (next.length > 0) await appendWithEviction(audioQueue, mediaSegment(active.id, sequence++, next))
+      if (next.length > 0) await appendWithEviction(audioQueue, mediaSegment(active.id, sequence++, next), current)
     })
   }
 
   const evict = async () => {
     const keep = video.currentTime - backBuffer
-    const limit = video.currentTime + forwardBuffer + 10
+    const limit = video.currentTime + forwardLimit + 10
     const range = videoQueue.sourceBuffer.buffered
     if (keep > 0 && range.length > 0 && range.start(0) < keep - 5) await trimBuffers(keep)
     if (range.length > 0 && range.end(range.length - 1) > limit + 5) {
@@ -390,13 +524,17 @@ export async function playMp4WithMse(
       ])
     }
     await withAudio(() => {
+      const { buffered } = videoQueue.sourceBuffer
+      if (buffered.length === 0) return
+      const earliest = buffered.start(0) - 1
       for (const [track, store] of stores) {
-        const cut = store.samples.findIndex(sample => toSeconds(track, sample.dts + sample.duration) >= keep)
-        const count = cut === -1 ? store.samples.length : cut
-        if (count > 0) {
-          store.samples.splice(0, count)
-          store.appended = Math.max(0, store.appended - count)
-        }
+        let cursor = 0
+        store.samples = store.samples.filter((sample, index) => {
+          const kept = toSeconds(track, sample.dts + sample.duration) > earliest && toSeconds(track, sample.dts) < limit
+          if (kept && index < store.appended) cursor++
+          return kept
+        })
+        store.appended = cursor
       }
     })
   }
@@ -407,8 +545,12 @@ export async function playMp4WithMse(
   }
 
   const backpressure = async (current: Session) => {
-    await evict()
-    while (!current.aborted && ahead() > forwardBuffer) {
+    if (ahead() > healthyAhead) await evict()
+    if (!bufferedRange(videoQueue.sourceBuffer, video.currentTime) && current.end > video.currentTime + 1) {
+      startSession(video.currentTime)
+      return
+    }
+    while (!current.aborted && ahead() > forwardLimit) {
       await new Promise<void>(resolve => {
         const wake = () => {
           video.removeEventListener('timeupdate', wake)
@@ -434,12 +576,10 @@ export async function playMp4WithMse(
       ...tracks.map(track => track.chunkOffset(track.sampleChunk(firstSamples.get(track) as number))),
     )
     await withAudio(() => {
-      for (const store of stores.values()) {
-        store.samples = []
-        store.appended = 0
-      }
+      for (const store of stores.values()) store.appended = store.samples.length
     })
     const stream = reusable && reusable.position <= startOffset ? reusable : new RangeStream(source, startOffset)
+    stream.windowSize = windowSize
     if (stream !== reusable) reusable?.cancel()
     reusable = undefined
     current.stream = stream
@@ -470,11 +610,11 @@ export async function playMp4WithMse(
             data,
           }
           if (track === videoTrack) pending.push(entry)
-          else stores.get(track)?.samples.push(entry)
+          else stores.get(track)?.samples.push({ ...entry, index: sample })
         }
         position += size
       }
-      if (pending.length >= (flushed ? flushFrames : firstFlushFrames)) {
+      if (pending.length >= (flushed && ahead() > healthyAhead ? flushFrames : firstFlushFrames)) {
         await flush(current, pending)
         pending = []
         flushed = true
@@ -500,29 +640,45 @@ export async function playMp4WithMse(
     })
   }
 
-  const keyframeBefore = (time: number) => {
-    const sample = videoTrack.syncSampleAtOrBefore(videoTrack.sampleAtTime(toMedia(videoTrack, time)))
-    return toSeconds(videoTrack, videoTrack.sampleDts(sample) + videoTrack.sampleCtsOffset(sample))
+  const presentation = (sample: number) =>
+    toSeconds(videoTrack, videoTrack.sampleDts(sample) + videoTrack.sampleCtsOffset(sample))
+
+  const snapTarget = (time: number) => {
+    const sample = videoTrack.sampleAtTime(toMedia(videoTrack, time))
+    const before = presentation(videoTrack.syncSampleAtOrBefore(sample))
+    const nextSync = videoTrack.nextSyncSample(sample)
+    const after = nextSync === undefined ? undefined : presentation(nextSync)
+    if (time - before <= 0.25) return time
+    if (time < playhead - 0.1 || before > playhead + 0.5) return before + 0.001
+    if (after !== undefined && after - time <= snapAhead) return after + 0.001
+    return time
   }
 
   const onSeeking = () => {
-    const time = video.currentTime
-    if (session && !session.aborted && time >= session.start - 0.01 && time <= Math.max(session.end, session.target) + 1) {
+    const requested = video.currentTime
+    const snapped = snapTarget(requested)
+    if (Math.abs(snapped - requested) > 0.05) {
+      video.currentTime = snapped
       return
     }
+    const time = requested
+    playhead = time
+    if (lead) void repairLead()
     const range = bufferedRange(videoQueue.sourceBuffer, time)
-    if (range && session && !session.aborted && Math.abs(range.end - session.end) < 1) return
-    const keyframe = keyframeBefore(time)
-    if (!range && time - keyframe > 0.25 && (time < playhead || keyframe > playhead + 0.5)) {
-      startSession(keyframe)
-      video.currentTime = keyframe
-      return
+    const current = session && !session.aborted ? session : undefined
+    if (current) {
+      const upcoming = time >= current.start - 0.01 && time >= current.end - 0.1 && time <= Math.max(current.end, current.target) + 1
+      const contiguous = range && Math.abs(range.end - current.end) < 1
+      if (upcoming || contiguous) return
     }
-    startSession(time)
+    startSession(range ? range.end : time)
   }
 
   const onTimeUpdate = () => {
-    if (!video.seeking) playhead = video.currentTime
+    if (video.seeking) return
+    playhead = video.currentTime
+    if (lead && (playhead > lead.end + 1 || playhead < lead.start - 1)) void repairLead()
+    if (forwardLimit < forwardBuffer && ahead() < forwardLimit / 2) forwardLimit = Math.min(forwardBuffer, forwardLimit + 10)
   }
 
   const onError = () => fail(video.error)

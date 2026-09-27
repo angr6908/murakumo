@@ -64,6 +64,49 @@ const VideoPlayerView: FC<{
   }, [])
 
   useEffect(() => {
+    const player = () => videoRef.current?.closest<HTMLElement>('.media-container')
+    const ownsFocus = (element: Element | null) =>
+      Boolean(
+        element?.closest(
+          'input, textarea, select, [contenteditable="true"], [role="menu"], [role="menuitem"], [role="menuitemradio"], [role="listbox"], [role="dialog"]',
+        ),
+      )
+    const focusPlayer = () => {
+      const container = player()
+      const active = document.activeElement
+      if (!container || active === container || ownsFocus(active) || active?.getAttribute('aria-expanded') === 'true') return
+      container.focus({ preventScroll: true })
+    }
+    let pointer = false
+    const onPointerDown = () => {
+      pointer = true
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Tab') pointer = false
+    }
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (event.detail === 0 || ownsFocus(target) || target.closest('[aria-haspopup]')) return
+      requestAnimationFrame(focusPlayer)
+    }
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target as Element
+      if (pointer && target.matches('button') && player()?.contains(target)) requestAnimationFrame(focusPlayer)
+    }
+    focusPlayer()
+    document.addEventListener('pointerdown', onPointerDown, true)
+    document.addEventListener('keydown', onKeyDown, true)
+    document.addEventListener('click', onClick, true)
+    document.addEventListener('focusin', onFocusIn, true)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true)
+      document.removeEventListener('keydown', onKeyDown, true)
+      document.removeEventListener('click', onClick, true)
+      document.removeEventListener('focusin', onFocusIn, true)
+    }
+  }, [])
+
+  useEffect(() => {
     const controller = new AbortController()
     let objectUrl: string | undefined
     fetch(subtitle, { signal: controller.signal })
@@ -138,6 +181,7 @@ const VideoPlayerView: FC<{
       startTime,
       resume,
       refreshUrl,
+      cacheKey: probeUrl,
       signal: controller.signal,
       onError: () => setMseFailedUrl(videoUrl),
     })
@@ -152,7 +196,7 @@ const VideoPlayerView: FC<{
       controller.abort()
       destroy?.()
     }
-  }, [useMse, probeResult, videoUrl, refreshUrl])
+  }, [useMse, probeResult, videoUrl, refreshUrl, probeUrl])
 
   return (
     <VideoPlayer poster={thumbnail}>

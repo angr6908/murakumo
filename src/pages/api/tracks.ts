@@ -40,8 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const probe = await probeMp4(downloadUrl).catch(() => null)
-    if (v && !res.getHeader('Cache-Control')) {
-      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=31536000, stale-while-revalidate')
+    if (v && probe && !res.getHeader('Cache-Control')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable')
     }
     setDefaultCacheControl(res)
     res.status(200).json(probe ?? { tracks: [] })

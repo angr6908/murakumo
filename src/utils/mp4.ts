@@ -27,6 +27,7 @@ export type Mp4Track = {
   isSync(sample: number): boolean
   sampleAtTime(time: number): number
   syncSampleAtOrBefore(sample: number): number
+  nextSyncSample(sample: number): number | undefined
   chunkOffset(chunk: number): number
   chunkFirstSample(chunk: number): number
   chunkSampleCount(chunk: number): number
@@ -391,6 +392,8 @@ function readTrack(view: DataView, trak: Box, movieTimescale: number): Mp4Track 
       return Math.min(Math.max(0, sample), sampleCount - 1)
     },
     syncSampleAtOrBefore: sample => (syncSamples ? (syncSamples[Math.max(0, upperBound(syncSamples, sample) - 1)] ?? 0) : sample),
+    nextSyncSample: sample =>
+      syncSamples ? syncSamples[upperBound(syncSamples, sample)] : sample + 1 < sampleCount ? sample + 1 : undefined,
     chunkOffset,
     chunkFirstSample(chunk) {
       const run = stscRunByChunk(chunk)
