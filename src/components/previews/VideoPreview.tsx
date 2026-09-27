@@ -62,6 +62,7 @@ const VideoPlayerView: FC<{
   const [subtitleUrl, setSubtitleUrl] = useState<string>()
   const [probe, setProbe] = useState<{ url: string; value: Mp4Probe | null }>()
   const [mseFailedUrl, setMseFailedUrl] = useState<string>()
+  const [chapters, setChapters] = useState<{ key: string; url: string }>()
 
   const canUseMse = hasMediaSource() && !hasNativeAudioTracks()
   const hinted = Boolean(multiAudio && probeUrl && canUseMse && !isFlv)
@@ -163,6 +164,7 @@ const VideoPlayerView: FC<{
     if (!useMse || !video) return
     const controller = new AbortController()
     let destroy: (() => void) | undefined
+    let chaptersUrl: string | undefined
     const startTime = video.currentTime
     const resume = !video.paused
     if (video.currentSrc) {
@@ -176,6 +178,10 @@ const VideoPlayerView: FC<{
       cacheKey: probeUrl,
       signal: controller.signal,
       onError: () => setMseFailedUrl(videoUrl),
+      onChapters: vtt => {
+        chaptersUrl = URL.createObjectURL(new Blob([vtt], { type: 'text/vtt' }))
+        setChapters({ key: videoUrl, url: chaptersUrl })
+      },
     })
       .then(dispose => {
         if (controller.signal.aborted) dispose()
@@ -187,6 +193,8 @@ const VideoPlayerView: FC<{
     return () => {
       controller.abort()
       destroy?.()
+      if (chaptersUrl) URL.revokeObjectURL(chaptersUrl)
+      setChapters(undefined)
     }
   }, [useMse, probeResult, videoUrl, refreshUrl, probeUrl])
 
@@ -206,6 +214,7 @@ const VideoPlayerView: FC<{
           }}
         >
           {subtitleUrl && <track kind="captions" label={videoName} src={subtitleUrl} default />}
+          {chapters?.key === videoUrl && <track kind="chapters" src={chapters.url} default />}
         </Video>
         {documentHotkeys.map(hotkey => (
           <Hotkey

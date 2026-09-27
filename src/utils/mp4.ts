@@ -35,7 +35,16 @@ export type Mp4Track = {
   firstChunkAtOrAfter(offset: number): number
 }
 
-export type Mp4Movie = { timescale: number; duration: number; fragmented: boolean; tracks: Mp4Track[] }
+export type Mp4Chapter = { start: number; title: string }
+
+export type Mp4Movie = {
+  timescale: number
+  duration: number
+  fragmented: boolean
+  tracks: Mp4Track[]
+  chapters: Mp4Chapter[]
+  chapterTrack?: Mp4Track
+}
 
 const genericName = /^(?:|sound ?handler|.*sound media handler|core media audio|.*audio handler)$/i
 const probeChunkSize = 4096
@@ -417,6 +426,27 @@ function readTrack(view: DataView, trak: Box, movieTimescale: number): Mp4Track 
   }
 }
 
+function readNeroChapters(view: DataView, udta: Box): Mp4Chapter[] {
+  const chpl = child(view, udta, 'chpl')
+  if (!chpl) return []
+  const end = chpl.offset + chpl.size
+  let position = payload(chpl)
+  const version = view.getUint8(position)
+  position += version === 1 ? 8 : 4
+  const count = view.getUint8(position)
+  position += 1
+  const chapters: Mp4Chapter[] = []
+  for (let index = 0; index < count && position + 9 <= end; index++) {
+    const length = view.getUint8(position + 8)
+    chapters.push({
+      start: Number(view.getBigUint64(position)) / 1e7,
+      title: decoder.decode(new Uint8Array(view.buffer, view.byteOffset + position + 9, Math.min(length, end - position - 9))),
+    })
+    position += 9 + length
+  }
+  return chapters
+}
+
 export function parseMoov(buffer: ArrayBuffer): Mp4Movie {
   const view = new DataView(buffer)
   const [moov] = boxes(view, 0, buffer.byteLength)
@@ -426,11 +456,24 @@ export function parseMoov(buffer: ArrayBuffer): Mp4Movie {
   const v1 = view.getUint8(payload(mvhd)) === 1
   const timescale = view.getUint32(payload(mvhd) + (v1 ? 20 : 12))
   const duration = v1 ? Number(view.getBigUint64(payload(mvhd) + 24)) : view.getUint32(payload(mvhd) + 16)
-  const tracks = [...boxes(view, payload(moov), moov.offset + moov.size)]
-    .filter(box => box.type === 'trak')
-    .map(trak => readTrack(view, trak, timescale))
-    .filter((track): track is Mp4Track => Boolean(track))
-  return { timescale, duration, fragmented: Boolean(child(view, moov, 'mvex')), tracks }
+  const children = [...boxes(view, payload(moov), moov.offset + moov.size)]
+  const traks = children.filter(box => box.type === 'trak')
+  const tracks = traks.map(trak => readTrack(view, trak, timescale)).filter((track): track is Mp4Track => Boolean(track))
+  const chapterIds = new Set(
+    traks.flatMap(trak => {
+      const chap = descendant(view, trak, 'tref', 'chap')
+      return chap ? Array.from({ length: (chap.size - chap.header) / 4 }, (_, i) => view.getUint32(payload(chap) + i * 4)) : []
+    }),
+  )
+  const udta = children.find(box => box.type === 'udta')
+  return {
+    timescale,
+    duration,
+    fragmented: Boolean(child(view, moov, 'mvex')),
+    tracks,
+    chapters: udta ? readNeroChapters(view, udta) : [],
+    chapterTrack: tracks.find(track => chapterIds.has(track.id)),
+  }
 }
 
 export function* chunksFrom(tracks: Mp4Track[], offset: number) {

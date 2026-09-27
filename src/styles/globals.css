@@ -64,3 +64,9 @@ code[class*="language-"] {
   --tw-ring-shadow: 0 0 #0000 !important;
   outline: none !important;
 }
+
+.video-skin .media-time-slider-chapter-title {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+}

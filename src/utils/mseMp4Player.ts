@@ -1,5 +1,5 @@
 import { initSegment, type Mp4Sample, mediaSegment } from './fmp4'
-import { chunksFrom, type Mp4Probe, type Mp4Track, parseMoov } from './mp4'
+import { chunksFrom, type Mp4Chapter, type Mp4Probe, type Mp4Track, parseMoov } from './mp4'
 
 type StoredSample = Mp4Sample & { index: number }
 type AudioStore = { samples: StoredSample[]; appended: number }
@@ -293,6 +293,46 @@ async function storeIndex(key: string, buffer: ArrayBuffer) {
   } catch {}
 }
 
+const stamp = (seconds: number) => {
+  const total = Math.max(0, Math.round(seconds * 1000))
+  const pad = (value: number, width = 2) => String(value).padStart(width, '0')
+  return `${pad(Math.floor(total / 3600000))}:${pad(Math.floor(total / 60000) % 60)}:${pad(Math.floor(total / 1000) % 60)}.${pad(total % 1000, 3)}`
+}
+
+function chaptersVtt(chapters: Mp4Chapter[], duration: number) {
+  const sorted = [...chapters].sort((a, b) => a.start - b.start)
+  const cues = sorted
+    .map((chapter, index) => ({ ...chapter, end: sorted[index + 1]?.start ?? duration }))
+    .filter(chapter => chapter.end > chapter.start)
+    .map(chapter => `${stamp(chapter.start)} --> ${stamp(chapter.end)}\n${chapter.title.replace(/\s*\n\s*/g, ' ')}`)
+  return cues.length > 0 ? `WEBVTT\n\n${cues.join('\n\n')}\n` : undefined
+}
+
+async function readChapterTrack(url: string, track: Mp4Track, signal: AbortSignal) {
+  const chapters: Mp4Chapter[] = []
+  const decoder = new TextDecoder()
+  for (let chunk = 0; chunk < track.chunkCount; chunk++) {
+    const first = track.chunkFirstSample(chunk)
+    const count = track.chunkSampleCount(chunk)
+    const sizes = Array.from({ length: count }, (_, index) => track.sampleSize(first + index))
+    const start = track.chunkOffset(chunk)
+    const total = sizes.reduce((sum, size) => sum + size, 0)
+    const resp = await fetch(url, { headers: { Range: `bytes=${start}-${start + total - 1}` }, signal })
+    if (resp.status !== 206) return chapters
+    const bytes = new Uint8Array(await resp.arrayBuffer())
+    let position = 0
+    sizes.forEach((size, index) => {
+      const length = size >= 2 ? (bytes[position] << 8) | bytes[position + 1] : 0
+      chapters.push({
+        start: track.sampleDts(first + index) / track.timescale + track.presentationOffset,
+        title: decoder.decode(bytes.subarray(position + 2, position + 2 + Math.min(length, size - 2))),
+      })
+      position += size
+    })
+  }
+  return chapters
+}
+
 async function locateIndex(stream: RangeStream) {
   for (let hops = 0; hops < 16; hops++) {
     const offset = stream.position
@@ -328,6 +368,7 @@ export async function playMp4WithMse(
     refreshUrl?: string
     cacheKey?: string
     signal: AbortSignal
+    onChapters?: (vtt: string) => void
     onError: (error: unknown) => void
   },
 ) {
@@ -380,6 +421,19 @@ export async function playMp4WithMse(
   const offsetOf = (track: Mp4Track) => track.presentationOffset + shift
   const toSeconds = (track: Mp4Track, time: number) => time / track.timescale + offsetOf(track)
   const toMedia = (track: Mp4Track, seconds: number) => Math.max(0, (seconds - offsetOf(track)) * track.timescale)
+  const emitChapters = (chapters: Mp4Chapter[]) => {
+    const vtt = chaptersVtt(
+      chapters.map(chapter => ({ ...chapter, start: chapter.start + shift })),
+      movie.duration / movie.timescale + shift,
+    )
+    if (vtt && !options.signal.aborted) options.onChapters?.(vtt)
+  }
+  if (movie.chapters.length > 0) emitChapters(movie.chapters)
+  else if (movie.chapterTrack) {
+    readChapterTrack(source.url, movie.chapterTrack, options.signal)
+      .then(emitChapters)
+      .catch(() => {})
+  }
   const stores = new Map<Mp4Track, AudioStore>(audioTracks.map(track => [track, { samples: [], appended: 0 }]))
   let active = audioTracks[0]
   let sequence = 1
