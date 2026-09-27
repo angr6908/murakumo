@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { memo } from 'react'
+import { useI18n } from '../i18n'
 import type { OdFolderChildren } from '../types'
 import { getItemPath } from '../utils/drivePath'
 import { formatModifiedDateTime, humanFileSize } from '../utils/fileDetails'
@@ -34,15 +35,16 @@ const headerClass = 'hidden font-medium text-muted-foreground text-xs md:block'
 const FolderListLayout = (props: FolderLayoutProps) => {
   const { path, folderChildren, selected, toggleItemSelected } = props
   const hashedToken = getStoredToken(path)
+  const { t } = useI18n()
 
   return (
     <div className="surface p-1 text-sm sm:rounded-popup">
       <div className="grid grid-cols-[minmax(0,1fr)] gap-y-0.5 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:gap-x-6">
         <div className="col-span-full grid h-10 grid-cols-subgrid items-center separator">
-          <div className="pl-2 font-medium text-muted-foreground text-xs">{'Name'}</div>
-          <div className={headerClass}>{'Last Modified'}</div>
-          <div className={`${headerClass} text-right`}>{'Size'}</div>
-          <SelectedFilesControls {...props} className="hidden items-center pr-1 md:flex" selectTitle={'Select files'} />
+          <div className="pl-2 font-medium text-muted-foreground text-xs">{t('Name')}</div>
+          <div className={headerClass}>{t('Last Modified')}</div>
+          <div className={`${headerClass} text-right`}>{t('Size')}</div>
+          <SelectedFilesControls {...props} className="hidden items-center pr-1 md:flex" selectTitle={t('Select files')} />
         </div>
 
         {folderChildren.map((c: OdFolderChildren) => {
@@ -77,7 +79,7 @@ const FolderListLayout = (props: FolderLayoutProps) => {
                     <Checkbox
                       checked={selected[c.id] ? 2 : 0}
                       onChange={() => toggleItemSelected(c.id)}
-                      title={'Select file'}
+                      title={t('Select file')}
                     />
                   )}
                 </div>

@@ -2,6 +2,7 @@ import { Menu } from '@videojs/react'
 import { CheckIcon, ChevronIcon } from '@videojs/react/icons'
 import { LayoutGrid, LayoutList, type LucideIcon } from 'lucide-react'
 
+import { useI18n } from '../i18n'
 import useLocalStorage from '../utils/useLocalStorage'
 
 const layouts: Array<{ id: number; name: 'Grid' | 'List'; icon: LucideIcon }> = [
@@ -24,13 +25,14 @@ export const useLayout = () => {
 
 const SwitchLayout = () => {
   const [layout, setLayout] = useLayout()
+  const { t } = useI18n()
   const Icon = layout.icon
 
   return (
     <Menu.Root side="bottom" align="end">
       <Menu.Trigger className="btn btn-sm gap-1.5 text-muted-foreground">
         <Icon className="size-4" />
-        <span>{layout.name}</span>
+        <span>{t(layout.name)}</span>
         <ChevronIcon className="size-3.5 rotate-90" />
       </Menu.Trigger>
       <Menu.Popup className="popup surface-popover menu-popup">
@@ -38,13 +40,13 @@ const SwitchLayout = () => {
           <Menu.RadioGroup
             value={layout.name}
             onValueChange={setLayout}
-            aria-label="Layout"
+            aria-label={t('Layout')}
             className="flex flex-col gap-0.5"
           >
             {layouts.map(option => (
               <Menu.RadioItem key={option.id} value={option.name} className="menu-item">
                 <option.icon className="size-4" />
-                <span>{option.name}</span>
+                <span>{t(option.name)}</span>
                 <Menu.ItemIndicator checked={option.name === layout.name} className="menu-item-indicator">
                   <CheckIcon className="size-4.5" />
                 </Menu.ItemIndicator>

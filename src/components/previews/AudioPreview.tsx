@@ -1,8 +1,10 @@
 import { selectPlayback, usePlayer } from '@videojs/react'
 import { Audio, AudioPlayer, AudioSkin } from '@videojs/react/audio'
+import { I18nProvider as PlayerI18n } from '@videojs/react/i18n'
 import { Music } from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
 
+import { useI18n } from '../../i18n'
 import type { OdFileObject } from '../../types'
 import { formatModifiedDateTime, humanFileSize } from '../../utils/fileDetails'
 import { getExtension, stripExtension } from '../../utils/getFileIcon'
@@ -52,6 +54,7 @@ const Cover: FC<{ src?: string; alt: string; wide: boolean }> = ({ src, alt, wid
 
 const AudioPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   const { asPath, hashedToken } = useCurrentPathToken()
+  const { locale } = useI18n()
   const thumbnail = thumbnailUrl(asPath, 'large', hashedToken)
   const audioUrl = directFileUrl(file, asPath, hashedToken)
   const isOpus = getExtension(file.name) === 'opus'
@@ -91,9 +94,11 @@ const AudioPreview: FC<{ file: OdFileObject }> = ({ file }) => {
             <h1 className="break-words font-semibold text-xl sm:text-2xl">{stripExtension(file.name)}</h1>
             <p className="text-control text-muted-foreground tabular-nums">{details.join(' · ')}</p>
           </div>
-          <AudioSkin className="w-full">
-            <Audio src={audioUrl} preload="metadata" />
-          </AudioSkin>
+          <PlayerI18n locale={locale}>
+            <AudioSkin className="w-full">
+              <Audio src={audioUrl} preload="metadata" />
+            </AudioSkin>
+          </PlayerI18n>
           <DownloadButtonGroup className="justify-center gap-2 sm:justify-start" />
         </div>
       </div>

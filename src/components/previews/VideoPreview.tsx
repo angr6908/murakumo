@@ -1,7 +1,9 @@
 import { Hotkey } from '@videojs/react'
+import { I18nProvider as PlayerI18n } from '@videojs/react/i18n'
 import { Video, VideoPlayer, VideoSkin } from '@videojs/react/video'
 import { type FC, useCallback, useEffect, useRef, useState } from 'react'
 import { useAsync } from 'react-async-hook'
+import { useI18n } from '../../i18n'
 import type { OdFileObject } from '../../types'
 
 import { labelAudioTracks } from '../../utils/audioTrackNames'
@@ -58,6 +60,7 @@ const VideoPlayerView: FC<{
   onResize: (size: { width: number; height: number }) => void
 }> = ({ videoName, videoUrl, ratio, thumbnail, subtitle, isFlv, mpegts, probeUrl, multiAudio, refreshUrl, onResize }) => {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const { locale } = useI18n()
   const audioLabelsRef = useRef<ReturnType<typeof labelAudioTracks>>(undefined)
   const wasWaitingRef = useRef(false)
   const [subtitleUrl, setSubtitleUrl] = useState<string>()
@@ -220,38 +223,41 @@ const VideoPlayerView: FC<{
 
   return (
     <VideoPlayer poster={thumbnail}>
-      <VideoSkin
-        className="w-full [--media-border-color:transparent] [--media-border-radius:0] sm:[&:not(:fullscreen)]:[clip-path:inset(0_round_var(--radius-popup))]"
-        style={{ aspectRatio: ratio }}
-      >
-        <Video
-          ref={attachVideo}
-          src={isFlv || useMse ? undefined : videoUrl}
-          preload={waiting ? 'none' : undefined}
-          playsInline
-          onLoadedMetadata={({ currentTarget: { videoWidth, videoHeight } }) => {
-            if (videoWidth && videoHeight) onResize({ width: videoWidth, height: videoHeight })
-          }}
+      <PlayerI18n locale={locale}>
+        <VideoSkin
+          className="w-full [--media-border-color:transparent] [--media-border-radius:0] sm:[&:not(:fullscreen)]:[clip-path:inset(0_round_var(--radius-popup))]"
+          style={{ aspectRatio: ratio }}
         >
-          {subtitleUrl && <track kind="captions" label={videoName} src={subtitleUrl} default />}
-          {chapters?.key === videoUrl && <track kind="chapters" src={chapters.url} default />}
-        </Video>
-        {documentHotkeys.map(hotkey => (
-          <Hotkey
-            key={hotkey.keys}
-            keys={hotkey.keys}
-            action={hotkey.action}
-            value={'value' in hotkey ? hotkey.value : undefined}
-            target="document"
-          />
-        ))}
-      </VideoSkin>
+          <Video
+            ref={attachVideo}
+            src={isFlv || useMse ? undefined : videoUrl}
+            preload={waiting ? 'none' : undefined}
+            playsInline
+            onLoadedMetadata={({ currentTarget: { videoWidth, videoHeight } }) => {
+              if (videoWidth && videoHeight) onResize({ width: videoWidth, height: videoHeight })
+            }}
+          >
+            {subtitleUrl && <track kind="captions" label={videoName} src={subtitleUrl} default />}
+            {chapters?.key === videoUrl && <track kind="chapters" src={chapters.url} default />}
+          </Video>
+          {documentHotkeys.map(hotkey => (
+            <Hotkey
+              key={hotkey.keys}
+              keys={hotkey.keys}
+              action={hotkey.action}
+              value={'value' in hotkey ? hotkey.value : undefined}
+              target="document"
+            />
+          ))}
+        </VideoSkin>
+      </PlayerI18n>
     </VideoPlayer>
   )
 }
 
 const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   const { asPath, hashedToken } = useCurrentPathToken()
+  const { t } = useI18n()
   const [measured, setMeasured] = useState<{ url: string; width: number; height: number }>()
 
   const thumbnail = thumbnailUrl(asPath, 'large', hashedToken)
@@ -299,7 +305,7 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
         </PreviewContainer>
       ) : loading && isFlv ? (
         <PreviewContainer>
-          <Loading loadingText={'Loading FLV extension...'} />
+          <Loading loadingText={t('Loading FLV extension...')} />
         </PreviewContainer>
       ) : (
         <VideoPlayerView

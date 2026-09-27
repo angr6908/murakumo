@@ -1,12 +1,14 @@
 import Document, { Head, Html, Main, NextScript } from 'next/document'
+import { defaultLocale, isLocale } from '../i18n/locales'
 import { readPublicRuntimeConfig, serializePublicRuntimeConfig } from '../utils/publicRuntimeConfig'
 
 class MyDocument extends Document {
   render() {
     const publicConfig = readPublicRuntimeConfig()
+    const locale = this.props.__NEXT_DATA__.props?.pageProps?.locale
 
     return (
-      <Html>
+      <Html lang={isLocale(locale) ? locale : defaultLocale}>
         <Head>
           <meta name="description" content="OneDrive Vercel Index" />
           <link rel="icon" href={publicConfig.icon || '/favicon.ico'} />

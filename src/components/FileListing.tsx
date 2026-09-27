@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { type FC, type ReactElement, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { useI18n } from '../i18n'
 import type { OdFileObject, OdFolderObject } from '../types'
 import { basename, getItemPath, isNotPersonalVaultItem, type QueryMap, queryToPath } from '../utils/drivePath'
 import { useProtectedSWRInfinite } from '../utils/fetchWithSWR'
@@ -26,11 +27,14 @@ import {
 import { PreviewContainer } from './previews/Containers'
 import { useLayout } from './SwitchLayout'
 
-const PreviewLoading = () => (
-  <PreviewContainer>
-    <Loading loadingText={'Loading ...'} />
-  </PreviewContainer>
-)
+const PreviewLoading = () => {
+  const { t } = useI18n()
+  return (
+    <PreviewContainer>
+      <Loading loadingText={t('Loading ...')} />
+    </PreviewContainer>
+  )
+}
 
 const ImagePreview = dynamic(() => import('./previews/ImagePreview'), { loading: PreviewLoading })
 const TextPreview = dynamic(() => import('./previews/TextPreview'), { loading: PreviewLoading })
@@ -82,6 +86,7 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
   const [folderGenerating, setFolderGenerating] = useState<Record<string, boolean>>({})
 
   const router = useRouter()
+  const { t } = useI18n()
   const [layout] = useLayout()
 
   const path = queryToPath(query)
@@ -119,7 +124,7 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
   if (!data) {
     return (
       <PreviewContainer>
-        <Loading loadingText={'Loading ...'} />
+        <Loading loadingText={t('Loading ...')} />
       </PreviewContainer>
     )
   }
@@ -163,12 +168,12 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
         setTotalGenerating(true)
         downloadMultipleFiles({ toastId, router, files: selectedFiles, folder })
           .then(() => {
-            toast.success('Finished downloading selected files.', {
+            toast.success(t('Finished downloading selected files.'), {
               id: toastId,
             })
           })
           .catch(() => {
-            toast.error('Failed to download selected files.', { id: toastId })
+            toast.error(t('Failed to download selected files.'), { id: toastId })
           })
           .finally(() => setTotalGenerating(false))
       }
@@ -185,7 +190,13 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
       const files = (async function* () {
         for await (const { meta: c, path: p, isFolder, error } of traverseFolder(path)) {
           if (error) {
-            toast.error(`Failed to download folder ${p}: ${error.status} ${error.message} Skipped it to continue.`)
+            toast.error(
+              t('Failed to download folder {{path}}: {{status}} {{message}} Skipped it to continue.', {
+                path: p,
+                status: error.status,
+                message: error.message,
+              }),
+            )
             continue
           }
           const hashedTokenForPath = getStoredToken(p)
@@ -209,10 +220,10 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
         folder: name,
       })
         .then(() => {
-          toast.success('Finished downloading folder.', { id: toastId })
+          toast.success(t('Finished downloading folder.'), { id: toastId })
         })
         .catch(() => {
-          toast.error('Failed to download folder.', { id: toastId })
+          toast.error(t('Failed to download folder.'), { id: toastId })
         })
         .finally(() => setFolderGenerating(folderGenerating => ({ ...folderGenerating, [id]: false })))
     }
@@ -238,7 +249,10 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
         {!onlyOnePage && (
           <div className="mt-3 flex flex-col items-center gap-2">
             <div className="text-muted-foreground text-xs tabular-nums">
-              {`Showing ${size} page(s) of ` + (isLoadingMore ? '... file(s)' : `${folderChildren.length} file(s)`)}
+              {t('Showing {{pages}} page(s) of {{files}} file(s)', {
+                pages: size,
+                files: isLoadingMore ? '...' : folderChildren.length,
+              })}
             </div>
             <button
               type="button"
@@ -249,13 +263,13 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
               {isLoadingMore ? (
                 <>
                   <Spinner />
-                  <span>{'Loading ...'}</span>
+                  <span>{t('Loading ...')}</span>
                 </>
               ) : isReachingEnd ? (
-                <span>{'No more files'}</span>
+                <span>{t('No more files')}</span>
               ) : (
                 <>
-                  <span>{'Load more'}</span>
+                  <span>{t('Load more')}</span>
                   <ChevronIcon className="size-4 rotate-90" />
                 </>
               )}
@@ -279,7 +293,7 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
 
   return (
     <PreviewContainer>
-      <FourOhFour errorMsg={`Cannot preview ${path}`} />
+      <FourOhFour errorMsg={t('Cannot preview {{path}}', { path })} />
     </PreviewContainer>
   )
 }

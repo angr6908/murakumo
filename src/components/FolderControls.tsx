@@ -1,5 +1,6 @@
 import { Download, Folder, Link } from 'lucide-react'
 import { type FC, type MouseEventHandler, useEffect, useRef } from 'react'
+import { useI18n } from '../i18n'
 import type { OdFolderChildren, OdFolderObject } from '../types'
 
 import { getBaseUrl } from '../utils/getBaseUrl'
@@ -123,28 +124,29 @@ export function SelectedFilesControls({
   selectTitle: string
 }) {
   const copyLink = useCopyLink()
+  const { t } = useI18n()
 
   return (
     <div className={className}>
-      <Tip label={'Copy selected files permalink'}>
+      <Tip label={t('Copy selected files permalink')}>
         <button
           type="button"
           className={iconButtonClass}
-          aria-label="Copy selected files permalink"
+          aria-label={t('Copy selected files permalink')}
           disabled={totalSelected === 0}
-          onClick={() => copyLink(handleSelectedPermalink(getBaseUrl()), 'Copied selected files permalink.')}
+          onClick={() => copyLink(handleSelectedPermalink(getBaseUrl()), t('Copied selected files permalink.'))}
         >
           <Link className="size-4" />
         </button>
       </Tip>
       {totalGenerating ? (
-        <Downloading title={'Downloading selected files, refresh page to cancel'} />
+        <Downloading title={t('Downloading selected files, refresh page to cancel')} />
       ) : (
-        <Tip label={'Download selected files'}>
+        <Tip label={t('Download selected files')}>
           <button
             type="button"
             className={iconButtonClass}
-            aria-label="Download selected files"
+            aria-label={t('Download selected files')}
             disabled={totalSelected === 0}
             onClick={handleSelectedDownload}
           >
@@ -173,29 +175,30 @@ export function FolderChildActions({
   downloadBaseUrl?: string
 }) {
   const copyLink = useCopyLink()
+  const { t } = useI18n()
 
   return (
     <div className={className}>
       {child.folder ? (
         <>
-          <Tip label={'Copy folder permalink'}>
+          <Tip label={t('Copy folder permalink')}>
             <button
               type="button"
               className={iconButtonClass}
-              aria-label="Copy folder permalink"
-              onClick={() => copyLink(`${getBaseUrl()}${itemPath}`, 'Copied folder permalink.')}
+              aria-label={t('Copy folder permalink')}
+              onClick={() => copyLink(`${getBaseUrl()}${itemPath}`, t('Copied folder permalink.'))}
             >
               <Link className="size-4" />
             </button>
           </Tip>
           {folderGenerating[child.id] ? (
-            <Downloading title={'Downloading folder, refresh page to cancel'} />
+            <Downloading title={t('Downloading folder, refresh page to cancel')} />
           ) : (
-            <Tip label={'Download folder'}>
+            <Tip label={t('Download folder')}>
               <button
                 type="button"
                 className={iconButtonClass}
-                aria-label="Download folder"
+                aria-label={t('Download folder')}
                 onClick={handleFolderDownload(itemPath, child.id, child.name)}
               >
                 <Download className="size-4" />
@@ -205,20 +208,20 @@ export function FolderChildActions({
         </>
       ) : (
         <>
-          <Tip label={'Copy raw file permalink'}>
+          <Tip label={t('Copy raw file permalink')}>
             <button
               type="button"
               className={iconButtonClass}
-              aria-label="Copy raw file permalink"
-              onClick={() => copyLink(rawFileUrl(itemPath, hashedToken, getBaseUrl()), 'Copied raw file permalink.')}
+              aria-label={t('Copy raw file permalink')}
+              onClick={() => copyLink(rawFileUrl(itemPath, hashedToken, getBaseUrl()), t('Copied raw file permalink.'))}
             >
               <Link className="size-4" />
             </button>
           </Tip>
-          <Tip label={'Download file'}>
+          <Tip label={t('Download file')}>
             <a
               className={iconButtonClass}
-              aria-label="Download file"
+              aria-label={t('Download file')}
               href={rawFileUrl(itemPath, hashedToken, downloadBaseUrl)}
             >
               <Download className="size-4" />

@@ -9,7 +9,10 @@ import toast from 'react-hot-toast'
 // Type-only import — erased at compile time, so the server-only icon set is not bundled here.
 import type { BrandIcons } from '../utils/brandIcons'
 
+import { useI18n } from '../i18n'
+
 import { getPublicRuntimeConfig } from '../utils/publicRuntimeConfig'
+import SwitchLang from './SwitchLang'
 import Tip from './Tip'
 
 const ClearTokensDialog = dynamic(() => import('./ClearTokensDialog'), { ssr: false })
@@ -29,6 +32,7 @@ const BrandIcon = ({ icon }: { icon?: IconDefinition }) => {
 
 const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
   const router = useRouter()
+  const { t } = useI18n()
   const [isMac, setIsMac] = useState(false)
   const siteConfig = getPublicRuntimeConfig()
   const protectedRoutes = siteConfig.protectedRoutes
@@ -70,7 +74,7 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
     protectedRoutes.forEach(r => {
       localStorage.removeItem(r)
     })
-    toast.success('Cleared all tokens')
+    toast.success(t('Cleared all tokens'))
     setTimeout(() => {
       router.reload()
     }, 1000)
@@ -96,7 +100,7 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
           onClick={openSearchBox}
         >
           <Search className="size-4" />
-          <span className="truncate">{'Search ...'}</span>
+          <span className="truncate">{t('Search ...')}</span>
           <span className="ml-auto hidden items-center gap-1 md:flex">
             <kbd className="kbd">{isMac ? '⌘' : 'Ctrl'}</kbd>
             <kbd className="kbd">K</kbd>
@@ -112,19 +116,21 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
         ))}
 
         {siteConfig.email && (
-          <Tip label={'Email'} side="bottom">
-            <a href={siteConfig.email} className="btn btn-icon" aria-label="Email">
+          <Tip label={t('Email')} side="bottom">
+            <a href={siteConfig.email} className="btn btn-icon" aria-label={t('Email')}>
               <Mail />
             </a>
           </Tip>
         )}
 
+        <SwitchLang />
+
         {tokenPresent && (
-          <Tip label={'Logout'} side="bottom">
+          <Tip label={t('Logout')} side="bottom">
             <button
               type="button"
               className="btn btn-icon"
-              aria-label="Logout"
+              aria-label={t('Logout')}
               onClick={() => {
                 setTokenDialogMounted(true)
                 setIsOpen(true)

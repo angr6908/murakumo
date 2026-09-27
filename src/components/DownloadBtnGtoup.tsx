@@ -2,6 +2,7 @@ import { Download, Link, type LucideIcon } from 'lucide-react'
 import Image from 'next/image'
 import type { MouseEventHandler, ReactNode } from 'react'
 
+import { useI18n } from '../i18n'
 import { getBaseUrl } from '../utils/getBaseUrl'
 import { rawFileUrl } from '../utils/odUrls'
 import { useCopyLink } from '../utils/useCopyLink'
@@ -44,6 +45,7 @@ const DownloadButtonGroup = ({
   const { asPath, hashedToken } = useCurrentPathToken()
 
   const copyLink = useCopyLink()
+  const { t } = useI18n()
   const directUrl = rawFileUrl(asPath, hashedToken)
 
   return (
@@ -51,14 +53,14 @@ const DownloadButtonGroup = ({
       <DownloadButton
         onClickCallback={() => window.open(directUrl)}
         primary
-        btnText={'Download'}
+        btnText={t('Download')}
         btnIcon={Download}
       />
       <DownloadButton
         onClickCallback={() =>
-          copyLink(rawFileUrl(asPath, hashedToken, getBaseUrl()), 'Copied direct link to clipboard.')
+          copyLink(rawFileUrl(asPath, hashedToken, getBaseUrl()), t('Copied direct link to clipboard.'))
         }
-        btnText={'Copy direct link'}
+        btnText={t('Copy direct link')}
         btnIcon={Link}
       />
       {children}

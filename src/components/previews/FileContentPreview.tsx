@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useI18n } from '../../i18n'
 import useFileContent from '../../utils/fetchOnMount'
 import { rawFileUrl } from '../../utils/odUrls'
 import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
@@ -21,6 +22,7 @@ export default function FileContentPreview({
   children: (content: string) => ReactElement
 }) {
   const { asPath } = useCurrentPathToken()
+  const { t } = useI18n()
   const { response: content, error, validating } = useFileContent(url ?? rawFileUrl(asPath, null, '', true), asPath)
 
   const footer = standalone ? <DownloadFooter /> : null
@@ -37,7 +39,7 @@ export default function FileContentPreview({
     return (
       <>
         <PreviewContainer>
-          <Loading loadingText={'Loading file content...'} />
+          <Loading loadingText={t('Loading file content...')} />
         </PreviewContainer>
         {footer}
       </>
@@ -48,7 +50,7 @@ export default function FileContentPreview({
     return (
       <>
         <PreviewContainer>
-          <FourOhFour errorMsg={'File is empty.'} />
+          <FourOhFour errorMsg={t('File is empty.')} />
         </PreviewContainer>
         {footer}
       </>

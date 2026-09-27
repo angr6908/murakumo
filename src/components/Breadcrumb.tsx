@@ -1,6 +1,7 @@
 import { ChevronIcon } from '@videojs/react/icons'
 import { House } from 'lucide-react'
 import Link from 'next/link'
+import { useI18n } from '../i18n'
 import { encodeSegments, type QueryMap } from '../utils/drivePath'
 
 const crumbClass = (current: boolean) =>
@@ -11,6 +12,7 @@ const crumbClass = (current: boolean) =>
   }`
 
 const HomeCrumb = ({ current }: { current: boolean }) => {
+  const { t } = useI18n()
   return (
     <Link
       href="/"
@@ -18,7 +20,7 @@ const HomeCrumb = ({ current }: { current: boolean }) => {
       aria-current={current ? 'page' : undefined}
     >
       <House className="size-4" />
-      <span>{'Home'}</span>
+      <span>{t('Home')}</span>
     </Link>
   )
 }

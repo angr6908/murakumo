@@ -1,4 +1,5 @@
 import type { FC } from 'react'
+import { useI18n } from '../../i18n'
 import type { OdFileObject } from '../../types'
 import { formatModifiedDateTime, humanFileSize } from '../../utils/fileDetails'
 import { getFileIcon } from '../../utils/getFileIcon'
@@ -8,11 +9,12 @@ import { DownloadFooter, PreviewContainer } from './Containers'
 const labelClass = 'font-medium text-muted-foreground text-xs'
 
 const DefaultPreview: FC<{ file: OdFileObject }> = ({ file }) => {
+  const { t } = useI18n()
   const Icon = getFileIcon(file.name, { video: Boolean(file.video) })
   const details = [
-    ['Last modified', formatModifiedDateTime(file.lastModifiedDateTime)],
-    ['File size', humanFileSize(file.size)],
-    ['MIME type', file.file?.mimeType ?? 'Unavailable'],
+    [t('Last modified'), formatModifiedDateTime(file.lastModifiedDateTime)],
+    [t('File size'), humanFileSize(file.size)],
+    [t('MIME type'), file.file?.mimeType ?? t('Unavailable')],
   ]
   const hashes = [
     ['Quick XOR', file.file.hashes?.quickXorHash],
@@ -40,7 +42,7 @@ const DefaultPreview: FC<{ file: OdFileObject }> = ({ file }) => {
             </dl>
 
             <div className="flex flex-col gap-1.5">
-              <div className={labelClass}>{'Hashes'}</div>
+              <div className={labelClass}>{t('Hashes')}</div>
               <dl className="well scroll-thin overflow-x-auto text-xs">
                 {hashes.map(([label, value], i) => (
                   <div
@@ -48,7 +50,7 @@ const DefaultPreview: FC<{ file: OdFileObject }> = ({ file }) => {
                     className={`flex gap-3 px-3 py-2 ${i > 0 ? 'shadow-[inset_0_1px_0_0_var(--color-border)]' : ''}`}
                   >
                     <dt className="w-20 shrink-0 font-medium text-muted-foreground">{label}</dt>
-                    <dd className="whitespace-nowrap font-mono">{value ?? 'Unavailable'}</dd>
+                    <dd className="whitespace-nowrap font-mono">{value ?? t('Unavailable')}</dd>
                   </div>
                 ))}
               </dl>

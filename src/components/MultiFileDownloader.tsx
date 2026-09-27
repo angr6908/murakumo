@@ -1,16 +1,18 @@
 import type JSZip from 'jszip'
 import type { NextRouter } from 'next/router'
 import toast from 'react-hot-toast'
+import { useI18n } from '../i18n'
 import { getItemPath } from '../utils/drivePath'
 import { fetcher } from '../utils/fetchWithSWR'
 import { driveListUrl } from '../utils/odUrls'
 import { getStoredToken } from '../utils/protectedRouteHandler'
 
 export function DownloadingToast({ router, progress }: { router: NextRouter; progress?: string }) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center gap-3">
       <div className="flex w-52 flex-col gap-2">
-        <span className="tabular-nums">{progress ? `Downloading ${progress}%` : 'Downloading selected files...'}</span>
+        <span className="tabular-nums">{progress ? t('Downloading {{progress}}%', { progress }) : t('Downloading selected files...')}</span>
         <div className="h-1 overflow-hidden rounded-full bg-muted">
           <div
             style={{ width: `${progress ?? 0}%` }}
@@ -19,7 +21,7 @@ export function DownloadingToast({ router, progress }: { router: NextRouter; pro
         </div>
       </div>
       <button type="button" className="btn btn-secondary btn-sm" onClick={() => router.reload()}>
-        {'Cancel'}
+        {t('Cancel')}
       </button>
     </div>
   )

@@ -1,5 +1,6 @@
 import { type FC, useEffect, useRef, useState } from 'react'
 import { type IReactReaderStyle, ReactReader, ReactReaderStyle } from 'react-reader'
+import { useI18n } from '../../i18n'
 import type { OdFileObject } from '../../types'
 import { directFileUrl } from '../../utils/odUrls'
 import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
@@ -56,6 +57,7 @@ const readerStyles: IReactReaderStyle = {
 
 const EPUBPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   const { asPath, hashedToken } = useCurrentPathToken()
+  const { t } = useI18n()
 
   const [epubContainerWidth, setEpubContainerWidth] = useState(400)
   const epubContainer = useRef<HTMLDivElement>(null)
@@ -101,7 +103,7 @@ const EPUBPreview: FC<{ file: OdFileObject }> = ({ file }) => {
               url={directFileUrl(file, asPath, hashedToken)}
               getRendition={fixEpub}
               readerStyles={readerStyles}
-              loadingView={<Loading loadingText={'Loading EPUB ...'} />}
+              loadingView={<Loading loadingText={t('Loading EPUB ...')} />}
               location={location}
               locationChanged={onLocationChange}
               epubInitOptions={{ openAs: 'epub' }}

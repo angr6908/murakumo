@@ -8,6 +8,7 @@ import { useAsync } from 'react-async-hook'
 import useConstant from 'use-constant'
 import type { OdSearchResult } from '../types'
 import { getFileIcon } from '../utils/getFileIcon'
+import { useI18n } from '../i18n'
 import { get } from '../utils/http'
 import { Spinner } from './Loading'
 import ModalShell from './ModalShell'
@@ -52,23 +53,26 @@ const SearchStatus = ({ children }: { children: ReactNode }) => (
 )
 
 function SearchResults({ query, results, onSelect }: { query: string; results: SearchState; onSelect: () => void }) {
+  const { t } = useI18n()
   if (query.trim().length === 0) return null
 
   if (results.loading) {
     return (
       <SearchStatus>
         <Spinner />
-        <span>{'Searching ...'}</span>
+        <span>{t('Searching ...')}</span>
       </SearchStatus>
     )
   }
 
   if (results.error) {
-    return <SearchStatus>{`Error: ${results.error.message ?? 'Search failed.'}`}</SearchStatus>
+    return (
+      <SearchStatus>{t('Error: {{message}}', { message: results.error.message ?? t('Search failed.') })}</SearchStatus>
+    )
   }
 
   if (!results.result || results.result.length === 0) {
-    return <SearchStatus>{'Nothing here.'}</SearchStatus>
+    return <SearchStatus>{t('Nothing here.')}</SearchStatus>
   }
 
   return (
@@ -88,6 +92,7 @@ export default function SearchModal({
   setSearchOpen: Dispatch<SetStateAction<boolean>>
 }) {
   const { query, setQuery, results } = useDriveItemSearch()
+  const { t } = useI18n()
 
   const closeSearchBox = () => {
     setSearchOpen(false)
@@ -101,14 +106,14 @@ export default function SearchModal({
       layerClassName="items-start sm:pt-[12vh]"
       panelClassName="max-w-xl gap-1 p-2"
     >
-      <Dialog.Title className="sr-only">Search</Dialog.Title>
+      <Dialog.Title className="sr-only">{t('Search')}</Dialog.Title>
       <label className="flex h-11 items-center gap-2.5 rounded-full bg-accent px-4 text-muted-foreground">
         <Search />
         <input
           type="text"
           id="search-box"
           className="min-w-0 flex-1 bg-transparent text-foreground text-sm placeholder:text-muted-foreground"
-          placeholder={'Search ...'}
+          placeholder={t('Search ...')}
           autoComplete="off"
           value={query}
           onChange={e => setQuery(e.target.value)}

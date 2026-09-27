@@ -3,9 +3,10 @@ import type { GetServerSideProps } from 'next'
 import { useRouter } from 'next/router'
 import OAuthCard, { Callout, inlineCodeClass } from '../../components/OAuthCard'
 import PageLayout from '../../components/PageLayout'
+import { useI18n } from '../../i18n'
+import { getLocaleProps, requestLocale } from '../../i18n/server'
 import { getOAuthPublicConfig, type OAuthPublicConfig } from '../../utils/apiConfig'
 import { getServerSidePublicConfigProps, type PublicConfigProps } from '../../utils/serverConfig'
-
 
 export default function OAuthStep1({
   publicConfig,
@@ -13,6 +14,7 @@ export default function OAuthStep1({
   oauthConfig,
 }: PublicConfigProps & { oauthConfig: OAuthPublicConfig }) {
   const router = useRouter()
+  const { t, rich } = useI18n()
   const configRows = [
     ['CLIENT_ID', oauthConfig.clientId],
     ['CLIENT_SECRET*', oauthConfig.obfuscatedClientSecret],
@@ -23,17 +25,22 @@ export default function OAuthStep1({
   ]
 
   return (
-    <PageLayout title={`OAuth Step 1 - ${publicConfig.title}`} brandIcons={brandIcons}>
-      <OAuthCard icon={Sparkles} step={1} stepTitle="Preparations">
+    <PageLayout
+      title={t('OAuth Step {{step}} - {{title}}', { step: 1, title: publicConfig.title })}
+      brandIcons={brandIcons}
+    >
+      <OAuthCard icon={Sparkles} step={1} stepTitle={t('Preparations')}>
         <Callout icon={TriangleAlert} iconClassName="text-warning">
-          OAuth tokens are stored in Vercel Blob for this deployment. Make sure the Blob store is connected so the
-          session survives redeploys and cold starts.
+          {t(
+            'OAuth tokens are stored in Vercel Blob for this deployment. Make sure the Blob store is connected so the session survives redeploys and cold starts.',
+          )}
         </Callout>
 
         <p>
-          Authorisation is required as no valid <code className={inlineCodeClass}>access_token</code> or{' '}
-          <code className={inlineCodeClass}>refresh_token</code> is present on this deployed instance. Check the
-          following configurations before proceeding with authorising Murakumo with your own Microsoft account.
+          {rich(
+            'Authorisation is required as no valid <code>access_token</code> or <code>refresh_token</code> is present on this deployed instance. Check the following configurations before proceeding with authorising Murakumo with your own Microsoft account.',
+            { code: chunk => <code className={inlineCodeClass}>{chunk}</code> },
+          )}
         </p>
 
         <dl className="well scroll-thin overflow-x-auto text-xs">
@@ -49,8 +56,9 @@ export default function OAuthStep1({
         </dl>
 
         <Callout icon={TriangleAlert} iconClassName="text-warning">
-          If you see anything missing or incorrect, update your Vercel environment variables and redeploy this
-          instance.
+          {t(
+            'If you see anything missing or incorrect, update your Vercel environment variables and redeploy this instance.',
+          )}
         </Callout>
 
         <div className="flex justify-end pt-2">
@@ -61,7 +69,7 @@ export default function OAuthStep1({
               router.push('/murakumo-oauth/step-2')
             }}
           >
-            <span>Proceed to OAuth</span>
+            <span>{t('Proceed to OAuth')}</span>
             <ArrowRight className="size-4" />
           </button>
         </div>
@@ -70,6 +78,10 @@ export default function OAuthStep1({
   )
 }
 
-export const getServerSideProps: GetServerSideProps = async () => ({
-  props: { ...getServerSidePublicConfigProps().props, oauthConfig: getOAuthPublicConfig() },
+export const getServerSideProps: GetServerSideProps = async ({ req }) => ({
+  props: {
+    ...getServerSidePublicConfigProps().props,
+    ...(await getLocaleProps(requestLocale(req))),
+    oauthConfig: getOAuthPublicConfig(),
+  },
 })

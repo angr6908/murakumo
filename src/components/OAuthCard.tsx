@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { useI18n } from '../i18n'
+
 export const inlineCodeClass = 'rounded-md bg-accent px-1.5 py-0.5 font-mono text-xs'
 
 export function Callout({
@@ -31,6 +33,7 @@ export default function OAuthCard({
   stepTitle: string
   children: ReactNode
 }) {
+  const { t } = useI18n()
   return (
     <div className="mx-auto w-full max-w-5xl py-4 sm:p-4">
       <div className="surface flex flex-col gap-4 p-4 text-sm leading-relaxed sm:rounded-popup sm:p-6">
@@ -38,13 +41,15 @@ export default function OAuthCard({
           <div className="grid size-11 place-items-center rounded-full bg-accent">
             <Icon />
           </div>
-          <h3 className="dialog-title">{'Welcome to your new Murakumo'}</h3>
-          <div className="flex w-36 gap-1" role="img" aria-label={`Step ${step} of 3`}>
+          <h3 className="dialog-title">{t('Welcome to your new Murakumo')}</h3>
+          <div className="flex w-36 gap-1" role="img" aria-label={t('Step {{step}} of 3', { step })}>
             {[1, 2, 3].map(i => (
               <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-primary' : 'bg-muted'}`} />
             ))}
           </div>
-          <div className="text-control text-muted-foreground">{`Step ${step}/3: ${stepTitle}`}</div>
+          <div className="text-control text-muted-foreground">
+            {t('Step {{step}}/3: {{title}}', { step, title: stepTitle })}
+          </div>
         </div>
         {children}
       </div>

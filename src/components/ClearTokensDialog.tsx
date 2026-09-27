@@ -1,6 +1,7 @@
 import { Dialog } from '@videojs/react'
 import { KeyRound, Trash } from 'lucide-react'
 
+import { useI18n } from '../i18n'
 import ModalShell from './ModalShell'
 
 export default function ClearTokensDialog({
@@ -14,13 +15,15 @@ export default function ClearTokensDialog({
   onClear: () => void
   protectedRoutes: string[]
 }) {
+  const { t } = useI18n()
   return (
     <ModalShell open={isOpen} onClose={onClose} panelClassName="max-w-sm">
       <div className="dialog-content">
-        <Dialog.Title className="dialog-title">{'Clear all tokens?'}</Dialog.Title>
+        <Dialog.Title className="dialog-title">{t('Clear all tokens?')}</Dialog.Title>
         <Dialog.Description className="dialog-description">
-          {'These tokens are used to authenticate yourself into password protected folders, ' +
-            'clearing them means that you will need to re-enter the passwords again.'}
+          {t(
+            'These tokens are used to authenticate yourself into password protected folders, clearing them means that you will need to re-enter the passwords again.',
+          )}
         </Dialog.Description>
       </div>
 
@@ -34,10 +37,10 @@ export default function ClearTokensDialog({
       </div>
 
       <div className="dialog-actions">
-        <Dialog.Close className="btn btn-secondary">{'Cancel'}</Dialog.Close>
+        <Dialog.Close className="btn btn-secondary">{t('Cancel')}</Dialog.Close>
         <button type="button" className="btn btn-danger" onClick={onClear}>
           <Trash className="size-4" />
-          <span>{'Clear all'}</span>
+          <span>{t('Clear all')}</span>
         </button>
       </div>
     </ModalShell>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { memo, useState } from 'react'
+import { useI18n } from '../i18n'
 import type { OdFolderChildren } from '../types'
 import { getItemPath } from '../utils/drivePath'
 import { formatModifiedDateTime } from '../utils/fileDetails'
@@ -64,14 +65,15 @@ const FolderGridLayout = (props: FolderLayoutProps) => {
   const hashedToken = getStoredToken(path)
   const baseUrl = getBaseUrl()
   const itemCount = folderChildren.length
+  const { t } = useI18n()
 
   return (
     <div className="surface p-1 text-sm sm:rounded-popup">
       <div className="flex h-10 items-center pr-1 pl-2 separator">
         <div className="flex-1 font-medium text-muted-foreground text-xs tabular-nums">
-          {`${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
+          {t('{{count}} items', { count: itemCount })}
         </div>
-        <SelectedFilesControls {...props} className="flex items-center" selectTitle={'Select all files'} />
+        <SelectedFilesControls {...props} className="flex items-center" selectTitle={t('Select all files')} />
       </div>
 
       <div className="mt-1 grid grid-cols-2 gap-1 md:grid-cols-4">
@@ -103,7 +105,7 @@ const FolderGridLayout = (props: FolderLayoutProps) => {
                   <Checkbox
                     checked={selected[c.id] ? 2 : 0}
                     onChange={() => toggleItemSelected(c.id)}
-                    title={'Select file'}
+                    title={t('Select file')}
                   />
                 </div>
               )}

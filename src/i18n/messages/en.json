@@ -1,0 +1,4 @@
+{
+  "{{count}} items|one": "{{count}} item",
+  "{{count}} items|other": "{{count}} items"
+}

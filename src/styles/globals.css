@@ -101,6 +101,15 @@
     color: var(--color-foreground);
   }
 
+  html:lang(ja) {
+    word-break: auto-phrase;
+    line-break: strict;
+  }
+
+  html:lang(ko) {
+    word-break: keep-all;
+  }
+
   ::selection {
     background-color: color-mix(in oklab, var(--color-foreground) 20%, transparent);
   }
