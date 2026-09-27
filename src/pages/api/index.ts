@@ -11,7 +11,6 @@ import {
   verifyProtectedPath,
 } from '../../utils/apiRoute'
 import { isNotPersonalVaultItem } from '../../utils/drivePath'
-import { getFileCategory } from '../../utils/fileType'
 import { get, isHttpError } from '../../utils/http'
 import { revealObfuscatedToken } from '../../utils/oAuthHandler'
 import { storeOdAuthTokens } from '../../utils/odAuthTokenStore'
@@ -123,24 +122,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const isAudio = getFileCategory(cleanPath.split('.').pop()?.toLowerCase() ?? '') === 'audio'
-    const [{ data: identityData }, thumbnails] = await Promise.all([
-      get(requestUrl, {
-        headers: graphHeaders(accessToken),
-        params: { select: fileItemSelect },
-      }),
-      isAudio
-        ? get(driveItemUrl(cleanPath, '/thumbnails'), { headers: graphHeaders(accessToken) })
-            .then(({ data }) => data.value)
-            .catch(() => undefined)
-        : undefined,
-    ])
+    const { data: identityData } = await get(requestUrl, {
+      headers: graphHeaders(accessToken),
+      params: { select: fileItemSelect },
+    })
 
     if ('folder' in identityData) {
       sendFolderData(await fetchFolderData())
       return
     }
-    res.status(200).json({ file: thumbnails ? { ...identityData, thumbnails } : identityData })
+    res.status(200).json({ file: identityData })
     return
   } catch (error: any) {
     sendDriveError(res, error)
