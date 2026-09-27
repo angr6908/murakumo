@@ -88,19 +88,20 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
         <Link
           href="/"
           passHref
-          className="mr-auto flex shrink-0 items-center gap-2.5 pr-2 transition-opacity duration-(--duration-base) hover:opacity-70"
+          className="mr-auto flex min-w-0 items-center gap-2.5 pr-2 transition-opacity duration-(--duration-base) hover:opacity-70"
         >
-          <Image src={siteConfig.icon} alt="icon" width="24" height="24" priority />
-          <span className="hidden font-semibold text-[0.9375rem] sm:block">{siteConfig.title}</span>
+          <Image className="shrink-0" src={siteConfig.icon} alt="icon" width="24" height="24" priority />
+          <span className="truncate font-semibold text-[0.9375rem]">{siteConfig.title}</span>
         </Link>
 
         <button
           type="button"
-          className="btn min-w-0 flex-1 justify-start bg-accent px-3 font-normal text-muted-foreground hover:bg-muted sm:mr-1 sm:max-w-64"
+          className="btn btn-icon sm:mr-1 sm:w-auto sm:min-w-0 sm:max-w-64 sm:flex-1 sm:justify-start sm:bg-accent sm:px-3 sm:font-normal sm:text-muted-foreground sm:hover:bg-muted"
+          aria-label={t('Search')}
           onClick={openSearchBox}
         >
-          <Search className="size-4" />
-          <span className="truncate">{t('Search ...')}</span>
+          <Search className="size-4.5 sm:size-4" />
+          <span className="hidden truncate sm:inline">{t('Search ...')}</span>
           <span className="ml-auto hidden items-center gap-1 md:flex">
             <kbd className="kbd">{isMac ? '⌘' : 'Ctrl'}</kbd>
             <kbd className="kbd">K</kbd>
