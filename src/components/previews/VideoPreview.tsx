@@ -24,6 +24,7 @@ import '@videojs/react/video/skin.css'
 const maxPlayerHeight = 'max(15rem, 100svh - 8rem)'
 const probeTimeout = 2500
 const chapterMagnet = 8
+const hiddenFrameInterval = 2000
 const mp4Extensions = new Set(['mp4', 'm4v', 'mov'])
 const documentHotkeys = [
   { keys: 'Space', action: 'togglePaused' },
@@ -87,6 +88,24 @@ const VideoPlayerView: FC<{
   const attachVideo = useCallback((video: HTMLVideoElement | null) => {
     videoRef.current = video
     audioLabelsRef.current = video ? labelAudioTracks(video) : undefined
+  }, [])
+
+  useEffect(() => {
+    const video = videoRef.current
+    const context = Object.assign(document.createElement('canvas'), { width: 1, height: 1 }).getContext('2d')
+    if (!video || !context) return
+    let lastRequest = 0
+    const keepDecodingWhileHidden = () => {
+      if (document.visibilityState !== 'hidden' || video.paused) return
+      const now = performance.now()
+      if (now - lastRequest < hiddenFrameInterval) return
+      lastRequest = now
+      try {
+        context.drawImage(video, 0, 0, 1, 1)
+      } catch {}
+    }
+    video.addEventListener('timeupdate', keepDecodingWhileHidden)
+    return () => video.removeEventListener('timeupdate', keepDecodingWhileHidden)
   }, [])
 
   useEffect(() => {
