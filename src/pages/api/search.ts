@@ -8,6 +8,7 @@ import {
 } from '../../utils/apiRoute'
 import { encodeSegments } from '../../utils/drivePath'
 import { get } from '../../utils/http'
+import { isProtectedPath } from '../../utils/onedriveApi'
 import siteConfig from '../../utils/siteConfig'
 
 function sanitizeQuery(query: string): string {
@@ -57,13 +58,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         $top: siteConfig.maxItems,
       },
     })
-    const items = (data.value ?? []).map((item: any) => ({
-      ...item,
-      path:
-        typeof item.parentReference?.path === 'string'
-          ? `${parentReferenceToAppPath(item.parentReference.path)}/${encodeURIComponent(item.name)}`
-          : '',
-    }))
+    const items = (data.value ?? []).flatMap((item: any) => {
+      if (typeof item.parentReference?.path !== 'string') return []
+      const parentPath = parentReferenceToAppPath(item.parentReference.path)
+      if (isProtectedPath(parentPath.split('/').map(decodeURIComponent).join('/'))) return []
+      return [{ ...item, path: `${parentPath}/${encodeURIComponent(item.name)}` }]
+    })
     res.status(200).json(items)
   } catch (error: any) {
     sendDriveError(res, error)

@@ -34,31 +34,15 @@ function useDriveItemSearch() {
 }
 
 function SearchResultItem({ item, onSelect }: { item: SearchItem; onSelect: () => void }) {
-  const disabled = item.path === ''
   const Icon = item.file ? getFileIcon(item.name) : Folder
-  const content = (
-    <>
-      <Icon className="text-muted-foreground" />
-      <div className="min-w-0 flex-1">
-        <div className="truncate font-medium">{item.name}</div>
-        <div className="truncate text-muted-foreground text-xs">
-          {disabled ? 'Path unavailable' : decodeURIComponent(item.path)}
-        </div>
-      </div>
-    </>
-  )
-
-  if (disabled) {
-    return (
-      <div className="menu-item gap-3" aria-disabled="true">
-        {content}
-      </div>
-    )
-  }
 
   return (
     <Link href={item.path} passHref prefetch={false} className="menu-item gap-3" onClick={onSelect}>
-      {content}
+      <Icon className="text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">{item.name}</div>
+        <div className="truncate text-muted-foreground text-xs">{decodeURIComponent(item.path)}</div>
+      </div>
     </Link>
   )
 }

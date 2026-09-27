@@ -89,6 +89,8 @@ function getAuthTokenPath(path: string) {
   return route ? `${route}.password` : ''
 }
 
+export const isProtectedPath = (path: string) => getAuthTokenPath(path) !== ''
+
 export async function checkAuthRoute(
   cleanPath: string,
   accessToken: string,
