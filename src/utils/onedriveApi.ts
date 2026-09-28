@@ -1,22 +1,18 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-
 import apiConfig from './apiConfig'
-import { get, isHttpError } from './http'
+import { normalizePath } from './drivePath'
+import { get, isHttpError, type QueryParams } from './http'
 import { exchangeToken } from './oAuthHandler'
 import { getOdAuthTokens, storeOdAuthTokens } from './odAuthTokenStore'
-import { join, resolve } from './posix'
 import { compareHashedToken } from './protectedRouteHandler'
 import siteConfig from './siteConfig'
 
-const basePath = resolve('/', siteConfig.baseDirectory)
+export const basePath = normalizePath(siteConfig.baseDirectory).replace(/\/$/, '')
 let refreshAccessTokenPromise: Promise<string> | null = null
 
 export function encodePath(path: string): string {
-  const encodedPath = join(basePath, path).replace(/\/$/, '')
-  return encodedPath === '/' || encodedPath === '' ? '' : `:${encodeURIComponent(encodedPath)}`
+  const fullPath = normalizePath(`${basePath}/${path}`)
+  return fullPath === '/' ? '' : `:${encodeURIComponent(fullPath)}`
 }
-
-export const graphHeaders = (accessToken: string) => ({ Authorization: `Bearer ${accessToken}` })
 
 /**
  * Build a Graph drive item URL. Graph requires the addressing colon to be closed before any
@@ -26,6 +22,11 @@ export function driveItemUrl(path: string, sub = ''): string {
   const encodedPath = encodePath(path)
   const separator = sub && encodedPath !== '' ? ':' : ''
   return `${apiConfig.driveApi}/root${encodedPath}${separator}${sub}`
+}
+
+export async function graphGet(url: string, accessToken: string, params?: QueryParams) {
+  const { data } = await get(url, { headers: { Authorization: `Bearer ${accessToken}` }, params })
+  return data
 }
 
 async function refreshAccessToken(refreshToken: string): Promise<string> {
@@ -68,24 +69,21 @@ export async function getAccessToken(): Promise<string> {
   try {
     return await refreshAccessTokenPromise
   } catch (error) {
-    if (isHttpError(error)) {
-      console.error('[onedriveApi] Failed to refresh access token.', {
-        status: error.response?.status,
-        message: error.response?.data,
-      })
-    } else {
-      console.error('[onedriveApi] Failed to refresh access token.', error)
-    }
+    console.error(
+      '[onedriveApi] Failed to refresh access token.',
+      isHttpError(error) ? { status: error.response.status, message: error.response.data } : error,
+    )
     return ''
   }
 }
 
+const protectedRoutes = siteConfig.protectedRoutes
+  .filter((route): route is string => typeof route === 'string')
+  .map(route => `${route.toLowerCase().replace(/\/$/, '')}/`)
+
 function getAuthTokenPath(path: string) {
   const cleanPath = `${path.toLowerCase()}/`
-  const route = siteConfig.protectedRoutes
-    .filter((r): r is string => typeof r === 'string')
-    .map(r => `${r.toLowerCase().replace(/\/$/, '')}/`)
-    .find(r => cleanPath.startsWith(r))
+  const route = protectedRoutes.find(route => cleanPath.startsWith(route))
   return route ? `${route}.password` : ''
 }
 
@@ -103,20 +101,12 @@ export async function checkAuthRoute(
   }
 
   try {
-    const token = await get(driveItemUrl(authTokenPath), {
-      headers: graphHeaders(accessToken),
-      params: {
-        select: '@microsoft.graph.downloadUrl,file',
-      },
+    const token = await graphGet(driveItemUrl(authTokenPath), accessToken, {
+      select: '@microsoft.graph.downloadUrl,file',
     })
-    const odProtectedToken = await get(token.data['@microsoft.graph.downloadUrl'])
+    const { data: password } = await get(token['@microsoft.graph.downloadUrl'])
 
-    if (
-      !compareHashedToken({
-        odTokenHeader,
-        dotPassword: odProtectedToken.data.toString(),
-      })
-    ) {
+    if (!compareHashedToken({ odTokenHeader, dotPassword: password.toString() })) {
       return { code: 401, message: 'Password required.' }
     }
   } catch (error: unknown) {
@@ -126,25 +116,4 @@ export async function checkAuthRoute(
   }
 
   return { code: 200, message: 'Authenticated.' }
-}
-
-/**
- * Native CORS headers for the transparent API proxy routes (replaces the `cors`
- * package). Handles preflight (`OPTIONS`) and mirrors the request origin.
- */
-const CORS_METHODS = 'GET,HEAD,PUT,PATCH,POST,DELETE'
-
-export function runCorsMiddleware(req: NextApiRequest, res: NextApiResponse) {
-  const origin = req.headers.origin
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin)
-    res.setHeader('Vary', 'Origin')
-  }
-  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] ?? '*')
-  res.setHeader('Access-Control-Allow-Methods', CORS_METHODS)
-  res.setHeader('Access-Control-Max-Age', '1728000')
-
-  if (req.method === 'OPTIONS') {
-    res.status(204).end()
-  }
 }

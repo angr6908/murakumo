@@ -1,10 +1,9 @@
 import Link from 'next/link'
 import { memo, useState } from 'react'
 import { useI18n } from '../i18n'
-import type { OdFolderChildren } from '../types'
+import type { OdDriveItemBase } from '../types'
 import { getItemPath } from '../utils/drivePath'
 import { formatModifiedDateTime } from '../utils/fileDetails'
-import { getBaseUrl } from '../utils/getBaseUrl'
 import { thumbnailUrl } from '../utils/odUrls'
 import { getStoredToken } from '../utils/protectedRouteHandler'
 import { useItemHover } from '../utils/useItemHover'
@@ -18,7 +17,7 @@ import {
   SelectedFilesControls,
 } from './FolderControls'
 
-const GridItem = memo(function GridItem({ c, path }: { c: OdFolderChildren; path: string }) {
+const GridItem = memo(function GridItem({ c, path }: { c: OdDriveItemBase; path: string }) {
   // We use the generated medium thumbnail for rendering preview images (excluding folders)
   const hashedToken = getStoredToken(path)
   const thumbnail = 'folder' in c ? null : thumbnailUrl(path, 'medium', hashedToken)
@@ -63,8 +62,6 @@ const GridItem = memo(function GridItem({ c, path }: { c: OdFolderChildren; path
 
 const FolderGridLayout = (props: FolderLayoutProps) => {
   const { path, folderChildren, selected, toggleItemSelected } = props
-  const hashedToken = getStoredToken(path)
-  const baseUrl = getBaseUrl()
   const itemCount = folderChildren.length
   const { t } = useI18n()
   const gridRef = useItemHover<HTMLDivElement>()
@@ -82,7 +79,7 @@ const FolderGridLayout = (props: FolderLayoutProps) => {
         ref={gridRef}
         className="hover-list mt-1 grid grid-cols-2 gap-1 [--item-radius:var(--radius-popup)] md:grid-cols-4"
       >
-        {folderChildren.map((c: OdFolderChildren) => {
+        {folderChildren.map(c => {
           const itemPath = getItemPath(path, c.name)
           return (
             <div key={c.id} className="group relative p-1.5 pb-2" data-item data-selected={selected[c.id] || undefined}>
@@ -91,9 +88,7 @@ const FolderGridLayout = (props: FolderLayoutProps) => {
                   {...props}
                   child={c}
                   itemPath={itemPath}
-                  hashedToken={hashedToken}
                   className="flex"
-                  downloadBaseUrl={baseUrl}
                 />
               </div>
 

@@ -2,14 +2,12 @@ import { Hotkey } from '@videojs/react'
 import { I18nProvider as PlayerI18n } from '@videojs/react/i18n'
 import { Video, VideoPlayer, VideoSkin } from '@videojs/react/video'
 import { type FC, useCallback, useEffect, useRef, useState } from 'react'
-import { useAsync } from 'react-async-hook'
 import { useI18n } from '../../i18n'
 import type { OdFileObject } from '../../types'
 
 import { labelAudioTracks } from '../../utils/audioTrackNames'
-import { formatModifiedDateTime, humanFileSize } from '../../utils/fileDetails'
+import { getExtension, stripExtension } from '../../utils/fileType'
 import { getBaseUrl } from '../../utils/getBaseUrl'
-import { getExtension, stripExtension } from '../../utils/getFileIcon'
 import type { Mp4Probe } from '../../utils/mp4'
 import { playMp4WithMse } from '../../utils/mseMp4Player'
 import { directFileUrl, rawFileUrl, thumbnailUrl, tracksUrl } from '../../utils/odUrls'
@@ -17,7 +15,7 @@ import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
 import DownloadButtonGroup, { DownloadButton } from '../DownloadBtnGtoup'
 import FourOhFour from '../FourOhFour'
 import Loading from '../Loading'
-import { PreviewContainer } from './Containers'
+import { MediaHeading, PreviewContainer } from './Containers'
 
 import '@videojs/react/video/skin.css'
 
@@ -69,14 +67,14 @@ const VideoPlayerView: FC<{
   const [mseFailedUrl, setMseFailedUrl] = useState<string>()
   const [chapters, setChapters] = useState<{ key: string; url: string }>()
 
-  const canUseMse = hasMediaSource() && !hasNativeAudioTracks()
-  const hinted = Boolean(multiAudio && probeUrl && canUseMse && !isFlv)
+  const canUseMse = hasMediaSource() && !hasNativeAudioTracks() && !isFlv
+  const probeable = Boolean(probeUrl && canUseMse)
+  const hinted = multiAudio && probeable
   const probeResult = probe && probe.url === probeUrl ? probe.value : undefined
-  const waiting = Boolean(probeUrl && canUseMse && !isFlv && !hinted && probeResult === undefined)
+  const waiting = probeable && !hinted && probeResult === undefined
   const videoCodec = probeResult?.tracks.find(track => track.type === 'vide')?.codec
   const useMse = Boolean(
     canUseMse &&
-      !isFlv &&
       mseFailedUrl !== videoUrl &&
       (hinted ||
         (probeResult?.moov &&
@@ -278,51 +276,46 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   const { asPath, hashedToken } = useCurrentPathToken()
   const { t } = useI18n()
   const [measured, setMeasured] = useState<{ url: string; width: number; height: number }>()
+  const [mpegts, setMpegts] = useState<{ player?: any; error?: Error }>()
 
   const thumbnail = thumbnailUrl(asPath, 'large', hashedToken)
   const subtitle = rawFileUrl(`${stripExtension(asPath)}.vtt`, hashedToken)
   const videoUrl = rawFileUrl(asPath, hashedToken)
   const playbackUrl = directFileUrl(file, asPath, hashedToken)
 
-  const isFlv = getExtension(file.name) === 'flv'
-  const probeUrl = mp4Extensions.has(getExtension(file.name))
+  const extension = getExtension(file.name)
+  const isFlv = extension === 'flv'
+  const probeUrl = mp4Extensions.has(extension)
     ? tracksUrl(asPath, hashedToken, file.file?.hashes?.quickXorHash || String(file.size))
     : undefined
-  const {
-    loading,
-    error,
-    result: mpegts,
-  } = useAsync(async () => {
-    if (isFlv) {
-      return (await import('mpegts.js')).default
-    }
+
+  useEffect(() => {
+    if (!isFlv) return
+    import('mpegts.js').then(
+      module => setMpegts({ player: module.default }),
+      error => setMpegts({ error }),
+    )
   }, [isFlv])
 
   const size =
     measured?.url === playbackUrl ? measured : { width: file.video?.width || 16, height: file.video?.height || 9 }
   const ratio = `${size.width} / ${size.height}`
   const columnWidth = size.height >= size.width ? `min(100%, calc(${maxPlayerHeight} * ${ratio}))` : undefined
-  const details = [
-    getExtension(file.name).toUpperCase(),
-    file.video?.width && file.video?.height ? `${file.video.width}×${file.video.height}` : undefined,
-    humanFileSize(file.size),
-    formatModifiedDateTime(file.lastModifiedDateTime),
-  ].filter(Boolean)
-
+  const absoluteVideoUrl = rawFileUrl(asPath, hashedToken, getBaseUrl())
   const externalPlayers = [
-    { text: 'IINA', img: '/players/iina.png', url: `iina://weblink?url=${getBaseUrl()}${videoUrl}` },
-    { text: 'VLC', img: '/players/vlc.png', url: `vlc://${getBaseUrl()}${videoUrl}` },
-    { text: 'PotPlayer', img: '/players/potplayer.png', url: `potplayer://${getBaseUrl()}${videoUrl}` },
+    { text: 'IINA', img: '/players/iina.png', url: `iina://weblink?url=${absoluteVideoUrl}` },
+    { text: 'VLC', img: '/players/vlc.png', url: `vlc://${absoluteVideoUrl}` },
+    { text: 'PotPlayer', img: '/players/potplayer.png', url: `potplayer://${absoluteVideoUrl}` },
     { text: 'nPlayer', img: '/players/nplayer.png', url: `nplayer-http://${window.location.hostname}${videoUrl}` },
   ]
 
   return (
     <div className="mx-auto w-full" style={{ width: columnWidth }}>
-      {error ? (
+      {isFlv && mpegts?.error ? (
         <PreviewContainer>
-          <FourOhFour errorMsg={error.message} />
+          <FourOhFour errorMsg={mpegts.error.message} />
         </PreviewContainer>
-      ) : loading && isFlv ? (
+      ) : isFlv && !mpegts ? (
         <PreviewContainer>
           <Loading loadingText={t('Loading FLV extension...')} />
         </PreviewContainer>
@@ -334,7 +327,7 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
           thumbnail={thumbnail}
           subtitle={subtitle}
           isFlv={isFlv}
-          mpegts={mpegts}
+          mpegts={mpegts?.player}
           probeUrl={probeUrl}
           multiAudio={file.name.includes('AAC×2')}
           refreshUrl={videoUrl}
@@ -343,10 +336,11 @@ const VideoPreview: FC<{ file: OdFileObject }> = ({ file }) => {
       )}
 
       <div className="mt-4 flex flex-col gap-4 px-4 sm:px-1">
-        <div className="flex flex-col gap-1">
-          <h1 className="break-words font-semibold text-lg sm:text-xl">{stripExtension(file.name)}</h1>
-          <p className="text-control text-muted-foreground tabular-nums">{details.join(' · ')}</p>
-        </div>
+        <MediaHeading
+          file={file}
+          detail={file.video?.width && file.video?.height ? `${file.video.width}×${file.video.height}` : undefined}
+          className="text-lg sm:text-xl"
+        />
         <DownloadButtonGroup className="justify-start gap-2">
           {externalPlayers.map(({ text, img, url }) => (
             <DownloadButton key={text} onClickCallback={() => window.open(url)} btnText={text} btnImage={img} />

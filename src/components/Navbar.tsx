@@ -42,15 +42,9 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
   }, [])
 
   const [tokenPresent, setTokenPresent] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
-  const [tokenDialogMounted, setTokenDialogMounted] = useState(false)
-
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searchMounted, setSearchMounted] = useState(false)
-  const openSearchBox = useCallback(() => {
-    setSearchMounted(true)
-    setSearchOpen(true)
-  }, [])
+  const [tokenDialogOpen, setTokenDialogOpen] = useState<boolean>()
+  const [searchOpen, setSearchOpen] = useState<boolean>()
+  const openSearchBox = useCallback(() => setSearchOpen(true), [])
 
   useEffect(() => {
     const handleSearchHotkey = (event: KeyboardEvent) => {
@@ -70,7 +64,7 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
   }, [protectedRoutes])
 
   const clearTokens = () => {
-    setIsOpen(false)
+    setTokenDialogOpen(false)
     protectedRoutes.forEach(r => {
       localStorage.removeItem(r)
     })
@@ -82,7 +76,7 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
 
   return (
     <header className="surface-bar sticky top-0 z-40 w-full">
-      {searchMounted && <SearchModal searchOpen={searchOpen} setSearchOpen={setSearchOpen} />}
+      {searchOpen !== undefined && <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />}
 
       <nav className="mx-auto flex h-14 w-full max-w-5xl items-center gap-1 px-3 sm:px-4">
         <Link
@@ -108,7 +102,7 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
           </span>
         </button>
 
-        {siteConfig.links.map((l: { name: string; link: string }) => (
+        {siteConfig.links.map(l => (
           <Tip key={l.name} label={l.name} side="bottom">
             <a href={l.link} target="_blank" rel="noopener noreferrer" className="btn btn-icon" aria-label={l.name}>
               <BrandIcon icon={brandIcons[l.name.toLowerCase()]} />
@@ -132,10 +126,7 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
               type="button"
               className="btn btn-icon"
               aria-label={t('Logout')}
-              onClick={() => {
-                setTokenDialogMounted(true)
-                setIsOpen(true)
-              }}
+              onClick={() => setTokenDialogOpen(true)}
             >
               <LogOut />
             </button>
@@ -143,10 +134,10 @@ const Navbar = ({ brandIcons = {} }: { brandIcons?: BrandIcons }) => {
         )}
       </nav>
 
-      {tokenDialogMounted && (
+      {tokenDialogOpen !== undefined && (
         <ClearTokensDialog
-          isOpen={isOpen}
-          onClose={() => setIsOpen(false)}
+          isOpen={tokenDialogOpen}
+          onClose={() => setTokenDialogOpen(false)}
           onClear={clearTokens}
           protectedRoutes={protectedRoutes}
         />

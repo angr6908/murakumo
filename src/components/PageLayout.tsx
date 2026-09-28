@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { resolveValue, Toaster } from 'react-hot-toast'
 
 import type { BrandIcons } from '../utils/brandIcons'
+import { getPublicRuntimeConfig } from '../utils/publicRuntimeConfig'
 import Footer from './Footer'
 import { Spinner } from './Loading'
 import Navbar from './Navbar'
@@ -20,14 +21,14 @@ export default function PageLayout({
   brandIcons,
   children,
 }: {
-  title: string
+  title?: string
   brandIcons?: BrandIcons
   children: ReactNode
 }) {
   return (
     <div className="flex min-h-screen flex-col">
       <Head>
-        <title>{title}</title>
+        <title>{title ?? getPublicRuntimeConfig().title}</title>
       </Head>
 
       <Toaster containerStyle={{ top: 'calc(var(--spacing) * 18)' }}>

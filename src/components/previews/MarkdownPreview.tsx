@@ -9,10 +9,9 @@ import remarkMath from 'remark-math'
 import 'katex/dist/katex.min.css'
 
 import type { OdDriveItemBase } from '../../types'
-import { dirname } from '../../utils/drivePath'
+import { dirname, getItemPath } from '../../utils/drivePath'
 import { rawFileUrl } from '../../utils/odUrls'
 import { getStoredToken } from '../../utils/protectedRouteHandler'
-import { DownloadFooter, PreviewContainer } from './Containers'
 import FileContentPreview from './FileContentPreview'
 
 const SyntaxHighlighter = dynamic(() => import('./SyntaxHighlighter'), { ssr: false })
@@ -61,7 +60,7 @@ const MarkdownPreview: FC<{
         return (
           <img
             alt={alt}
-            src={isUrlAbsolute(src as string) ? src : rawFileUrl(`${parentPath}/${src}`, hashedToken)}
+            src={isUrlAbsolute(src) ? src : rawFileUrl(`${parentPath}/${src}`, hashedToken)}
             title={title}
             width={width}
             height={height}
@@ -76,18 +75,13 @@ const MarkdownPreview: FC<{
   }, [parentPath])
 
   return (
-    <FileContentPreview url={rawFileUrl(`${parentPath}/${file.name}`, null, '', true)} standalone={standalone}>
+    <FileContentPreview path={standalone ? path : getItemPath(path, file.name)} standalone={standalone}>
       {content => (
-        <div>
-          <PreviewContainer>
-            <div className="markdown-body">
-              {/* Using rehypeRaw to render HTML inside Markdown is potentially dangerous, use under safe environments. (#18) */}
-              <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={customRenderer}>
-                {content}
-              </ReactMarkdown>
-            </div>
-          </PreviewContainer>
-          {standalone && <DownloadFooter />}
+        <div className="markdown-body">
+          {/* Using rehypeRaw to render HTML inside Markdown is potentially dangerous, use under safe environments. (#18) */}
+          <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={customRenderer}>
+            {content}
+          </ReactMarkdown>
         </div>
       )}
     </FileContentPreview>

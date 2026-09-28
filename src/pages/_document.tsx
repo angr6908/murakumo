@@ -1,25 +1,25 @@
 import Document, { Head, Html, Main, NextScript } from 'next/document'
 import { defaultLocale, isLocale } from '../i18n/locales'
-import { readPublicRuntimeConfig, serializePublicRuntimeConfig } from '../utils/publicRuntimeConfig'
+import { serializedPublicRuntimeConfig } from '../utils/publicRuntimeConfig'
+import siteConfig from '../utils/siteConfig'
 
 class MyDocument extends Document {
   render() {
-    const publicConfig = readPublicRuntimeConfig()
     const locale = this.props.__NEXT_DATA__.props?.pageProps?.locale
 
     return (
       <Html lang={isLocale(locale) ? locale : defaultLocale}>
         <Head>
           <meta name="description" content="OneDrive Vercel Index" />
-          <link rel="icon" href={publicConfig.icon || '/favicon.ico'} />
+          <link rel="icon" href={siteConfig.icon} />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-          {publicConfig.googleFontLinks.map(link => (
+          {siteConfig.googleFontLinks.map(link => (
             <link key={link} rel="stylesheet" href={link} />
           ))}
           <script
             dangerouslySetInnerHTML={{
-              __html: `window.__ONEDRIVE_INDEX_PUBLIC_CONFIG__=${serializePublicRuntimeConfig()};`,
+              __html: `window.__ONEDRIVE_INDEX_PUBLIC_CONFIG__=${serializedPublicRuntimeConfig};`,
             }}
           />
           {/*

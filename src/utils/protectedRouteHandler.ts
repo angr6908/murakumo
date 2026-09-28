@@ -4,49 +4,32 @@ import { getPublicRuntimeConfig } from './publicRuntimeConfig'
 
 const encryptToken = (token: string) => sha256(token).toString()
 
-// The encoded form of each protected route is derived from build-time config, so it is
-// computed once per config object rather than on every lookup (one lookup per rendered item).
 // `route` is the raw configured value (also the localStorage key); `prefix` is its encoded form.
-let encodedRoutesCache: { source: string[]; routes: Array<{ route: string; prefix: string }> } | null = null
+let encodedRoutes: Array<{ route: string; prefix: string }> | undefined
 
-function encodedProtectedRoutes() {
-  const protectedRoutes = getPublicRuntimeConfig().protectedRoutes
-  if (encodedRoutesCache?.source !== protectedRoutes) {
-    encodedRoutesCache = {
-      source: protectedRoutes,
-      routes: protectedRoutes.filter(Boolean).map(route => ({ route, prefix: encodeSegments(route.split('/')) })),
-    }
-  }
-  return encodedRoutesCache.routes
+export function matchProtectedRoute(path: string): string {
+  encodedRoutes ??= getPublicRuntimeConfig()
+    .protectedRoutes.filter(Boolean)
+    .map(route => ({ route, prefix: encodeSegments(route.split('/')) }))
+  return encodedRoutes.find(({ prefix }) => path.startsWith(prefix))?.route ?? ''
 }
 
-// The hashed token (like encodedProtectedRoutes) is constant for the lifetime of the page unless the
-// user clears localStorage, so it is memoized per raw path. Callers in the listing hot path invoke
-// this once per rendered row; a per-path cache avoids re-reading localStorage and re-hashing the
-// same route for every child on every render.
-const storedTokenCache = new Map<string, string | null>()
+const hashedTokens = new Map<string, string | null>()
+
+function hashStoredToken(route: string): string | null {
+  try {
+    const token = JSON.parse(localStorage.getItem(route) ?? 'null')
+    return token ? encryptToken(token) : null
+  } catch {
+    return null
+  }
+}
 
 export function getStoredToken(path: string): string | null {
-  const cached = storedTokenCache.get(path)
-  if (cached !== undefined) return cached
-
-  const storedToken = typeof window !== 'undefined' ? localStorage.getItem(matchProtectedRoute(path)) : ''
-  let result: string | null = null
-  if (storedToken) {
-    try {
-      const parsed = JSON.parse(storedToken)
-      result = parsed ? encryptToken(parsed) : null
-    } catch {
-      result = null
-    }
-  }
-  storedTokenCache.set(path, result)
-  return result
-}
-
-/** Invalidate path-token cache entries (e.g. after clearing tokens) so repeated lookups see fresh state. */
-export function clearStoredTokenCache() {
-  storedTokenCache.clear()
+  if (typeof window === 'undefined') return null
+  const route = matchProtectedRoute(path)
+  if (!hashedTokens.has(route)) hashedTokens.set(route, hashStoredToken(route))
+  return hashedTokens.get(route) ?? null
 }
 
 export function compareHashedToken({
@@ -57,8 +40,4 @@ export function compareHashedToken({
   dotPassword: string
 }): boolean {
   return encryptToken(dotPassword.trim()) === odTokenHeader
-}
-
-export function matchProtectedRoute(route: string): string {
-  return encodedProtectedRoutes().find(({ prefix }) => route.startsWith(prefix))?.route ?? ''
 }

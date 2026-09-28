@@ -1,43 +1,34 @@
 import { useEffect, useState } from 'react'
-import { appendProtectedToken } from './odUrls'
-import { getStoredToken } from './protectedRouteHandler'
 
-export default function useFileContent(
-  fetchUrl: string,
-  path: string,
-): { response: any; error: string; validating: boolean } {
+export default function useFileContent(url: string): { response: string; error: string; validating: boolean } {
   const [response, setResponse] = useState('')
   const [validating, setValidating] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    let active = true
     const controller = new AbortController()
-    const url = appendProtectedToken(fetchUrl, getStoredToken(path))
+    const { signal } = controller
 
     setValidating(true)
     setError('')
 
-    fetch(url, { headers: { Accept: 'text/plain, */*' }, signal: controller.signal })
-      .then(async response => {
+    fetch(url, { headers: { Accept: 'text/plain, */*' }, signal })
+      .then(response => {
         if (!response.ok) throw new Error(response.statusText || `Request failed with ${response.status}`)
         return response.text()
       })
       .then(text => {
-        if (active) setResponse(text)
+        if (!signal.aborted) setResponse(text)
       })
       .catch(error => {
-        if (active && error.name !== 'AbortError') setError(error.message)
+        if (!signal.aborted) setError(error.message)
       })
       .finally(() => {
-        if (active) setValidating(false)
+        if (!signal.aborted) setValidating(false)
       })
 
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [fetchUrl, path])
+    return () => controller.abort()
+  }, [url])
 
   return { response, error, validating }
 }

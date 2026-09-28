@@ -1,11 +1,7 @@
 import { Dialog } from '@videojs/react'
-import AwesomeDebouncePromise from 'awesome-debounce-promise'
 import { Folder, Search } from 'lucide-react'
 import Link from 'next/link'
-import type { Dispatch, ReactNode, SetStateAction } from 'react'
-import { useState } from 'react'
-import { useAsync } from 'react-async-hook'
-import useConstant from 'use-constant'
+import { type ReactNode, useEffect, useState } from 'react'
 import type { OdSearchResult } from '../types'
 import { getFileIcon } from '../utils/getFileIcon'
 import { useI18n } from '../i18n'
@@ -14,24 +10,33 @@ import { Spinner } from './Loading'
 import ModalShell from './ModalShell'
 
 type SearchItem = OdSearchResult[number]
-type SearchState = ReturnType<typeof useDriveItemSearch>['results']
+type SearchState = { loading: boolean; error?: { message?: string }; result?: SearchItem[] }
 
-function useDriveItemSearch() {
-  const [query, setQuery] = useState('')
-  const searchDriveItem = async (q: string) => {
-    const { data } = await get('/api/search/', { params: { q: q.trim() } })
-    return data.map((item: OdSearchResult[number]) => ({
-      ...item,
-      path: typeof item.path === 'string' ? item.path : '',
-    }))
-  }
+function useDriveItemSearch(query: string): SearchState {
+  const [state, setState] = useState<SearchState>({ loading: false })
 
-  const debouncedDriveItemSearch = useConstant(() => AwesomeDebouncePromise(searchDriveItem, 1000))
-  const results = useAsync(async () => {
-    return query.trim().length === 0 ? [] : debouncedDriveItemSearch(query)
+  useEffect(() => {
+    const q = query.trim()
+    if (!q) {
+      setState({ loading: false })
+      return
+    }
+
+    let active = true
+    setState({ loading: true })
+    const timer = setTimeout(() => {
+      get('/api/search/', { params: { q } }).then(
+        ({ data }) => active && setState({ loading: false, result: data }),
+        error => active && setState({ loading: false, error }),
+      )
+    }, 1000)
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
   }, [query])
 
-  return { query, setQuery, results }
+  return state
 }
 
 function SearchResultItem({ item, onSelect }: { item: SearchItem; onSelect: () => void }) {
@@ -84,24 +89,19 @@ function SearchResults({ query, results, onSelect }: { query: string; results: S
   )
 }
 
-export default function SearchModal({
-  searchOpen,
-  setSearchOpen,
-}: {
-  searchOpen: boolean
-  setSearchOpen: Dispatch<SetStateAction<boolean>>
-}) {
-  const { query, setQuery, results } = useDriveItemSearch()
+export default function SearchModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [query, setQuery] = useState('')
+  const results = useDriveItemSearch(query)
   const { t } = useI18n()
 
   const closeSearchBox = () => {
-    setSearchOpen(false)
+    onClose()
     setQuery('')
   }
 
   return (
     <ModalShell
-      open={searchOpen}
+      open={open}
       onClose={closeSearchBox}
       layerClassName="items-start sm:pt-[12vh]"
       panelClassName="max-w-xl gap-1 p-2"

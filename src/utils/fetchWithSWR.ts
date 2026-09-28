@@ -13,6 +13,7 @@ const immutableOptions = {
   revalidateIfStale: false,
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
+  revalidateFirstPage: false,
 }
 
 // The document head starts the first listing request during HTML parse (see _document.tsx). If

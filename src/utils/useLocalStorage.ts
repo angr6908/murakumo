@@ -8,7 +8,6 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
   const initialValueRef = useRef(initialValue)
 
   const readValue = useCallback((): T => {
-    if (typeof window === 'undefined') return initialValueRef.current
     try {
       const item = window.localStorage.getItem(key)
       return item ? (JSON.parse(item) as T) : initialValueRef.current
@@ -20,7 +19,6 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
   const [storedValue, setStoredValue] = useState<T>(() => initialValueRef.current)
 
   const setValue: SetValue<T> = value => {
-    if (typeof window === 'undefined') return
     try {
       const newValue = value instanceof Function ? value(storedValue) : value
       window.localStorage.setItem(key, JSON.stringify(newValue))
@@ -30,17 +28,12 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
   }
 
   useEffect(() => {
-    setStoredValue(readValue())
-  }, [readValue])
-
-  useEffect(() => {
-    const handler = () => setStoredValue(readValue())
-    window.addEventListener('storage', handler)
-    window.addEventListener('local-storage', handler)
-    return () => {
-      window.removeEventListener('storage', handler)
-      window.removeEventListener('local-storage', handler)
-    }
+    const sync = () => setStoredValue(readValue())
+    const controller = new AbortController()
+    sync()
+    window.addEventListener('storage', sync, { signal: controller.signal })
+    window.addEventListener('local-storage', sync, { signal: controller.signal })
+    return () => controller.abort()
   }, [readValue])
 
   return [storedValue, setValue]

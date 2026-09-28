@@ -10,7 +10,7 @@ const u32 = (value: number) => [(value >>> 24) & 255, (value >>> 16) & 255, (val
 
 const u64 = (value: number) => [...u32(Math.floor(value / 2 ** 32)), ...u32(value >>> 0)]
 
-function concat(parts: Part[]) {
+export function concat(parts: Part[]) {
   const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0))
   let offset = 0
   for (const part of parts) {

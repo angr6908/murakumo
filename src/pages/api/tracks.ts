@@ -1,37 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-import {
-  driveItemUrl,
-  graphHeaders,
-  normalisePathQuery,
-  requireAccessToken,
-  sendDriveError,
-  setDefaultCacheControl,
-  verifyProtectedPath,
-} from '../../utils/apiRoute'
-import { get } from '../../utils/http'
+import { authorizePath, sendDriveError } from '../../utils/apiRoute'
 import { probeMp4 } from '../../utils/mp4'
+import { driveItemUrl, graphGet } from '../../utils/onedriveApi'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { path = '/', odpt = '', v } = req.query
-
-  const pathQuery = normalisePathQuery(path)
-  if ('error' in pathQuery) {
-    res.status(400).json({ error: pathQuery.error })
-    return
-  }
-
-  const accessToken = await requireAccessToken(res)
-  if (!accessToken) return
-
-  const odTokenHeader = (req.headers['od-protected-token'] as string) ?? odpt
-  const hasAccess = await verifyProtectedPath(res, pathQuery.path, accessToken, odTokenHeader as string)
-  if (!hasAccess) return
+  const authorized = await authorizePath(req, res)
+  if (!authorized) return
 
   try {
-    const { data } = await get(driveItemUrl(pathQuery.path), {
-      headers: graphHeaders(accessToken),
-      params: { select: 'id,@microsoft.graph.downloadUrl' },
+    const data = await graphGet(driveItemUrl(authorized.path), authorized.accessToken, {
+      select: 'id,@microsoft.graph.downloadUrl',
     })
     const downloadUrl = data['@microsoft.graph.downloadUrl']
     if (!downloadUrl) {
@@ -40,12 +19,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const probe = await probeMp4(downloadUrl).catch(() => null)
-    if (v && probe && !res.getHeader('Cache-Control')) {
+    if (req.query.v && probe && res.getHeader('Cache-Control') !== 'no-cache') {
       res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable')
     }
-    setDefaultCacheControl(res)
     res.status(200).json(probe ?? { tracks: [] })
-  } catch (error: any) {
+  } catch (error) {
     sendDriveError(res, error)
   }
 }

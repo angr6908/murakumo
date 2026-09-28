@@ -15,7 +15,7 @@ import {
   Sheet,
   TextAlignStart,
 } from 'lucide-react'
-import { extensionCategory, type FileCategory } from './fileType'
+import { type FileCategory, getExtension, getFileCategory } from './fileType'
 
 const iconForCategory: Record<FileCategory, LucideIcon> = {
   image: Image,
@@ -34,30 +34,14 @@ const iconForCategory: Record<FileCategory, LucideIcon> = {
 
 // Office documents have distinct icons per actual format, so resolve them before the category.
 const officeIconBySubtype: Record<string, LucideIcon> = {
-  doc: NotebookText,
-  docx: NotebookText,
   ppt: Presentation,
   pptx: Presentation,
   xls: Sheet,
   xlsx: Sheet,
 }
 
-export function getRawExtension(fileName: string): string {
-  return fileName.slice(((fileName.lastIndexOf('.') - 1) >>> 0) + 2)
-}
-export function getExtension(fileName: string): string {
-  return getRawExtension(fileName).toLowerCase()
-}
-/** Drop the trailing `.ext` from a file name or path. */
-export function stripExtension(fileName: string): string {
-  return fileName.slice(0, fileName.lastIndexOf('.'))
-}
-
 export function getFileIcon(fileName: string, flags?: { video?: boolean }): LucideIcon {
-  const extension = getExtension(fileName)
-  if (extension === 'ts' && flags?.video) return iconForCategory.video
-
-  const category = extensionCategory[extension]
-  if (category === 'office') return officeIconBySubtype[extension] ?? iconForCategory.office
+  const category = getFileCategory(fileName, flags)
+  if (category === 'office') return officeIconBySubtype[getExtension(fileName)] ?? iconForCategory.office
   return category ? iconForCategory[category] : File
 }

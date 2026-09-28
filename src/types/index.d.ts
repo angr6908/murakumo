@@ -21,7 +21,6 @@ export type OdDriveItemBase = {
   image?: OdImageFile
   video?: OdVideoFile
 }
-export type OdFolderChildren = OdDriveItemBase
 // A file object returned from the OneDrive API. This object may contain 'video' if the file is a video.
 export type OdFileObject = OdDriveItemBase & {
   '@odata.context': string
@@ -45,12 +44,6 @@ export type OdVideoFile = {
   audioFormat: string
   audioSamplesPerSecond: number
 }
-export type OdThumbnail = {
-  id: string
-  large: { height: number; width: number; url: string }
-  medium: { height: number; width: number; url: string }
-  small: { height: number; width: number; url: string }
-}
 // API response object for /api/search/?q=<query>. Likewise, this array of items may also contain either files or folders.
 export type OdSearchResult = Array<{
   id: string
@@ -60,11 +53,3 @@ export type OdSearchResult = Array<{
   path: string
   parentReference: { id: string; name: string; path: string }
 }>
-// API response object for /api/item/?id={id}. This is primarily used for determining the path of the driveItem by ID.
-export type OdDriveItem = {
-  '@odata.context': string
-  '@odata.etag': string
-  id: string
-  name: string
-  parentReference: { driveId: string; driveType: string; id: string; path: string }
-}

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import apiConfig from '../../utils/apiConfig'
-import { graphHeaders, requireAccessToken, sendDriveError, setDefaultCacheControl } from '../../utils/apiRoute'
-import { get } from '../../utils/http'
+import { requireAccessToken, sendDriveError, setDefaultCacheControl } from '../../utils/apiRoute'
+import { graphGet } from '../../utils/onedriveApi'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id = '' } = req.query
@@ -17,13 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!accessToken) return
 
   try {
-    const { data } = await get(`${apiConfig.driveApi}/items/${id}`, {
-      headers: graphHeaders(accessToken),
-      params: { select: 'id,name,parentReference' },
-    })
-    res.status(200).json(data)
-  } catch (error: any) {
+    res.status(200).json(await graphGet(`${apiConfig.driveApi}/items/${id}`, accessToken, { select: 'id,name,parentReference' }))
+  } catch (error) {
     sendDriveError(res, error)
   }
-  return
 }

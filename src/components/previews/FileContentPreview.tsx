@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import type { ReactNode } from 'react'
 import { useI18n } from '../../i18n'
 import useFileContent from '../../utils/fetchOnMount'
 import { rawFileUrl } from '../../utils/odUrls'
@@ -12,20 +12,20 @@ import { DownloadFooter, PreviewContainer } from './Containers'
  * text-based preview shares, handing the loaded content to `children`.
  */
 export default function FileContentPreview({
-  url,
+  path,
   standalone = true,
+  footer,
   children,
 }: {
-  url?: string
+  path?: string
   /** When embedded in a listing (e.g. a README), skip the sticky footer. */
   standalone?: boolean
-  children: (content: string) => ReactElement
+  footer?: (content: string) => ReactNode
+  children: (content: string) => ReactNode
 }) {
-  const { asPath } = useCurrentPathToken()
+  const { asPath, hashedToken } = useCurrentPathToken()
   const { t } = useI18n()
-  const { response: content, error, validating } = useFileContent(url ?? rawFileUrl(asPath, null, '', true), asPath)
-
-  const footer = standalone ? <DownloadFooter /> : null
+  const { response: content, error, validating } = useFileContent(rawFileUrl(path ?? asPath, hashedToken, '', true))
 
   if (error) {
     return (
@@ -35,27 +35,19 @@ export default function FileContentPreview({
     )
   }
 
-  if (validating) {
-    return (
-      <>
-        <PreviewContainer>
+  const loaded = !validating && content !== ''
+  return (
+    <div>
+      <PreviewContainer>
+        {validating ? (
           <Loading loadingText={t('Loading file content...')} />
-        </PreviewContainer>
-        {footer}
-      </>
-    )
-  }
-
-  if (!content) {
-    return (
-      <>
-        <PreviewContainer>
+        ) : loaded ? (
+          children(content)
+        ) : (
           <FourOhFour errorMsg={t('File is empty.')} />
-        </PreviewContainer>
-        {footer}
-      </>
-    )
-  }
-
-  return children(content)
+        )}
+      </PreviewContainer>
+      {standalone && <DownloadFooter>{loaded && footer?.(content)}</DownloadFooter>}
+    </div>
+  )
 }

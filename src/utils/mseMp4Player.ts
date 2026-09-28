@@ -1,5 +1,5 @@
 import { initSegment, type Mp4Sample, mediaSegment } from './fmp4'
-import { chunksFrom, type Mp4Chapter, type Mp4Probe, type Mp4Track, parseMoov } from './mp4'
+import { chunksFrom, fetchRange, type Mp4Chapter, type Mp4Movie, type Mp4Probe, type Mp4Track, parseMoov } from './mp4'
 
 type StoredSample = Mp4Sample & { index: number }
 type AudioStore = { samples: StoredSample[]; appended: number }
@@ -49,11 +49,7 @@ class RangeStream {
   }
 
   async #request(start: number, length: number) {
-    const request = () =>
-      fetch(this.#source.url, {
-        headers: { Range: `bytes=${start}-${start + length - 1}` },
-        signal: this.#controller.signal,
-      })
+    const request = () => fetchRange(this.#source.url, start, length, this.#controller.signal)
     let resp = await request()
     if (expiredStatus.has(resp.status) && (await this.#source.refresh())) {
       await resp.body?.cancel()
@@ -150,6 +146,15 @@ class RangeStream {
     }
     this.#drop(length)
     return out
+  }
+
+  async view(length: number) {
+    await this.#ensure(length)
+    const first = this.#chunks[0]
+    if (first.length - this.#head < length) return this.read(length)
+    const view = first.subarray(this.#head, this.#head + length)
+    this.#drop(length)
+    return view
   }
 
   async skipTo(offset: number) {
@@ -287,7 +292,7 @@ async function readCachedIndex(key: string, size?: number) {
 async function storeIndex(key: string, buffer: ArrayBuffer) {
   try {
     const cache = await caches.open(indexCacheName)
-    await cache.put(key, new Response(buffer.slice(0)))
+    await cache.put(key, new Response(buffer))
     const keys = await cache.keys()
     for (const old of keys.slice(0, Math.max(0, keys.length - indexCacheLimit))) await cache.delete(old)
   } catch {}
@@ -317,8 +322,11 @@ async function readChapterTrack(url: string, track: Mp4Track, signal: AbortSigna
     const sizes = Array.from({ length: count }, (_, index) => track.sampleSize(first + index))
     const start = track.chunkOffset(chunk)
     const total = sizes.reduce((sum, size) => sum + size, 0)
-    const resp = await fetch(url, { headers: { Range: `bytes=${start}-${start + total - 1}` }, signal })
-    if (resp.status !== 206) return chapters
+    const resp = await fetchRange(url, start, total, signal)
+    if (resp.status !== 206) {
+      await resp.body?.cancel()
+      return chapters
+    }
     const bytes = new Uint8Array(await resp.arrayBuffer())
     let position = 0
     sizes.forEach((size, index) => {
@@ -376,7 +384,7 @@ export async function playMp4WithMse(
     url,
     async refresh() {
       if (!options.refreshUrl) return false
-      const resp = await fetch(options.refreshUrl, { headers: { Range: 'bytes=0-0' } }).catch(() => undefined)
+      const resp = await fetchRange(options.refreshUrl, 0, 1).catch(() => undefined)
       await resp?.body?.cancel()
       if (!resp?.ok || !resp.url || resp.url === source.url) return false
       source.url = resp.url
@@ -394,7 +402,7 @@ export async function playMp4WithMse(
   const supported = (kind: string, track: Mp4Track) =>
     Boolean(track.codec && track.orderedChunks && MediaSource.isTypeSupported(`${kind}/mp4; codecs="${track.codec}"`))
 
-  let movie: ReturnType<typeof parseMoov>
+  let movie: Mp4Movie
   try {
     const stream = initial as RangeStream
     const index = cached ?? (probe ? (await stream.read(probe.moov.size)).buffer : await locateIndex(stream))
@@ -443,10 +451,7 @@ export async function playMp4WithMse(
   let lead: { start: number; end: number } | undefined
   let forwardLimit = forwardBuffer
   let audioLock: Promise<void> = Promise.resolve()
-  let markReady = () => {}
-  const ready = new Promise<void>(resolve => {
-    markReady = resolve
-  })
+  const { promise: ready, resolve: markReady } = Promise.withResolvers<void>()
 
   const withAudio = (task: () => Promise<void> | void) => {
     const run = audioLock.then(task)
@@ -558,13 +563,14 @@ export async function playMp4WithMse(
     await Promise.all([videoQueue.remove(0, keep), audioQueue.remove(0, keep)])
   }
 
-  const nextPlaybackEvent = () =>
+  const nextVideoEvent = (types: string[], current?: Session) =>
     new Promise<void>(resolve => {
-      const done = () => {
-        for (const type of ['timeupdate', 'seeking', 'emptied']) video.removeEventListener(type, done)
+      const wake = () => {
+        for (const type of types) video.removeEventListener(type, wake)
         resolve()
       }
-      for (const type of ['timeupdate', 'seeking', 'emptied']) video.addEventListener(type, done)
+      if (current) current.wake = wake
+      for (const type of types) video.addEventListener(type, wake)
     })
 
   const appendWithEviction = async (queue: BufferQueue, data: Uint8Array<ArrayBuffer>, current?: Session) => {
@@ -576,7 +582,7 @@ export async function playMp4WithMse(
         if ((error as DOMException)?.name !== 'QuotaExceededError' || destroyed) throw error
         forwardLimit = Math.max(10, Math.min(forwardLimit, ahead() - 5))
         await trimBuffers(video.currentTime - 5)
-        if (attempt > 0) await nextPlaybackEvent()
+        if (attempt > 0) await nextVideoEvent(['timeupdate', 'seeking', 'emptied'])
       }
     }
   }
@@ -635,18 +641,7 @@ export async function playMp4WithMse(
       startSession(video.currentTime)
       return
     }
-    while (!current.aborted && ahead() > forwardLimit) {
-      await new Promise<void>(resolve => {
-        const wake = () => {
-          video.removeEventListener('timeupdate', wake)
-          video.removeEventListener('seeking', wake)
-          resolve()
-        }
-        current.wake = wake
-        video.addEventListener('timeupdate', wake)
-        video.addEventListener('seeking', wake)
-      })
-    }
+    while (!current.aborted && ahead() > forwardLimit) await nextVideoEvent(['timeupdate', 'seeking'], current)
   }
 
   const pump = async (current: Session) => {
@@ -685,7 +680,7 @@ export async function playMp4WithMse(
         const size = track.sampleSize(sample)
         if (sample >= min) {
           await stream.skipTo(position)
-          const data = await stream.read(size)
+          const data = await (track === videoTrack ? stream.view(size) : stream.read(size))
           if (current.aborted) return
           const entry = {
             dts: track.sampleDts(sample),
@@ -712,12 +707,15 @@ export async function playMp4WithMse(
     if (!current.aborted && mediaSource.readyState === 'open') mediaSource.endOfStream()
   }
 
+  const abortSession = () => {
+    if (!session) return
+    session.aborted = true
+    session.stream?.cancel()
+    session.wake?.()
+  }
+
   const startSession = (time: number) => {
-    if (session) {
-      session.aborted = true
-      session.stream?.cancel()
-      session.wake?.()
-    }
+    abortSession()
     const current: Session = { aborted: false, target: time, start: time, end: time }
     session = current
     pump(current).catch(error => {
@@ -747,17 +745,19 @@ export async function playMp4WithMse(
       video.currentTime = snapped
       return
     }
-    const time = requested
-    playhead = time
+    playhead = requested
     if (lead) void repairLead()
-    const range = bufferedRange(videoQueue.sourceBuffer, time)
+    const range = bufferedRange(videoQueue.sourceBuffer, requested)
     const current = session && !session.aborted ? session : undefined
     if (current) {
-      const upcoming = time >= current.start - 0.01 && time >= current.end - 0.1 && time <= Math.max(current.end, current.target) + 1
+      const upcoming =
+        requested >= current.start - 0.01 &&
+        requested >= current.end - 0.1 &&
+        requested <= Math.max(current.end, current.target) + 1
       const contiguous = range && Math.abs(range.end - current.end) < 1
       if (upcoming || contiguous) return
     }
-    startSession(range ? range.end : time)
+    startSession(range ? range.end : requested)
   }
 
   const onTimeUpdate = () => {
@@ -778,11 +778,7 @@ export async function playMp4WithMse(
 
   return () => {
     destroyed = true
-    if (session) {
-      session.aborted = true
-      session.stream?.cancel()
-      session.wake?.()
-    }
+    abortSession()
     reusable?.cancel()
     video.removeEventListener('seeking', onSeeking)
     video.removeEventListener('timeupdate', onTimeUpdate)

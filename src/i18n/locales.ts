@@ -35,8 +35,10 @@ export const acceptLanguageRules: Array<{ locale: Exclude<Locale, 'en'>; value: 
   { locale: 'tr-TR', value: tag('[tT][rR]') },
 ]
 
+const acceptLanguagePatterns = acceptLanguageRules.map(({ locale, value }) => ({ locale, pattern: new RegExp(`^${value}$`) }))
+
 export function negotiateLocale(acceptLanguage?: string | string[]): Locale {
   const header = Array.isArray(acceptLanguage) ? acceptLanguage.at(-1) : acceptLanguage
   if (!header) return defaultLocale
-  return acceptLanguageRules.find(({ value }) => new RegExp(`^${value}$`).test(header))?.locale ?? defaultLocale
+  return acceptLanguagePatterns.find(({ pattern }) => pattern.test(header))?.locale ?? defaultLocale
 }

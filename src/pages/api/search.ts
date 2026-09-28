@@ -1,15 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import {
-  driveItemUrl,
-  graphHeaders,
-  requireAccessToken,
-  sendDriveError,
-  setDefaultCacheControl,
-} from '../../utils/apiRoute'
+import { requireAccessToken, sendDriveError, setDefaultCacheControl } from '../../utils/apiRoute'
 import { encodeSegments, isNotPersonalVaultItem } from '../../utils/drivePath'
-import { get } from '../../utils/http'
-import { isProtectedPath } from '../../utils/onedriveApi'
-import { resolve } from '../../utils/posix'
+import { basePath, driveItemUrl, graphGet, isProtectedPath } from '../../utils/onedriveApi'
 import siteConfig from '../../utils/siteConfig'
 
 function sanitizeQuery(query: string): string {
@@ -19,7 +11,7 @@ function sanitizeQuery(query: string): string {
 }
 
 const maxSearchPages = 5
-const basePath = resolve('/', siteConfig.baseDirectory).replace(/\/$/, '')
+const lowerBasePath = basePath.toLowerCase()
 const driveRootPrefix = /^\/drives?\/(?:[^/]+\/)?root:/
 
 function appParentPath(parentReferencePath: string): string | null {
@@ -33,23 +25,17 @@ function appParentPath(parentReferencePath: string): string | null {
   }
   if (!basePath) return absolutePath
   const lowerPath = absolutePath.toLowerCase()
-  const lowerBase = basePath.toLowerCase()
-  if (lowerPath === lowerBase) return ''
-  return lowerPath.startsWith(`${lowerBase}/`) ? absolutePath.slice(basePath.length) : null
+  if (lowerPath === lowerBasePath) return ''
+  return lowerPath.startsWith(`${lowerBasePath}/`) ? absolutePath.slice(basePath.length) : null
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { q: searchQuery = '' } = req.query
+  const { q } = req.query
 
   setDefaultCacheControl(res)
 
-  if (typeof searchQuery !== 'string') {
-    res.status(200).json([])
-    return
-  }
-
-  const cleanQuery = searchQuery.trim()
-  if (!cleanQuery) {
+  const searchQuery = typeof q === 'string' ? q.trim() : ''
+  if (!searchQuery) {
     res.status(200).json([])
     return
   }
@@ -57,17 +43,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const accessToken = await requireAccessToken(res)
   if (!accessToken) return
 
-  const searchApi = driveItemUrl('/', `/search(q='${sanitizeQuery(cleanQuery)}')`)
-
   try {
     const items: any[] = []
-    let pageUrl: string | undefined = searchApi
+    let pageUrl: string | undefined = driveItemUrl('/', `/search(q='${sanitizeQuery(searchQuery)}')`)
     for (let page = 0; pageUrl && page < maxSearchPages && items.length < siteConfig.maxItems; page++) {
-      const { data } = await get(pageUrl, {
-        headers: graphHeaders(accessToken),
-        params:
-          page === 0 ? { $select: 'id,name,file,folder,parentReference', $top: siteConfig.maxItems } : undefined,
-      })
+      const data = await graphGet(
+        pageUrl,
+        accessToken,
+        page === 0 ? { $select: 'id,name,file,folder,parentReference', $top: siteConfig.maxItems } : undefined,
+      )
       for (const item of data.value ?? []) {
         if (typeof item.parentReference?.path !== 'string') continue
         const parentPath = appParentPath(item.parentReference.path)
@@ -79,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       pageUrl = data['@odata.nextLink']
     }
     res.status(200).json(items.slice(0, siteConfig.maxItems))
-  } catch (error: any) {
+  } catch (error) {
     sendDriveError(res, error)
   }
 }

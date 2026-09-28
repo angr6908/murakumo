@@ -18,7 +18,6 @@
     "@fortawesome/free-brands-svg-icons": "^7.3.1",
     "@vercel/blob": "^2.8.0",
     "@videojs/react": "10.0.0-rc.4",
-    "awesome-debounce-promise": "^2.1.0",
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.23",
     "jszip": "^3.10.2",
@@ -26,9 +25,7 @@
     "lucide-react": "^1.48.0",
     "mpegts.js": "^1.8.2",
     "next": "^16.3.6",
-    "preview-office-docs": "^1.0.2",
     "react": "^19.3.0",
-    "react-async-hook": "^4.0.0",
     "react-dom": "^19.3.0",
     "react-hot-toast": "^2.6.1",
     "react-markdown": "^10.1.0",
@@ -39,8 +36,7 @@
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "swr": "^2.5.1",
-    "use-clipboard-copy": "^0.2.0",
-    "use-constant": "^2.0.0"
+    "use-clipboard-copy": "^0.2.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

@@ -1,140 +1,79 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-import {
-  driveItemUrl,
-  graphHeaders,
-  nextPageToken,
-  normalisePathQuery,
-  requireAccessToken,
-  sendDriveError,
-  setDefaultCacheControl,
-  verifyProtectedPath,
-} from '../../utils/apiRoute'
+import { authorizePath, handleCors, sendDriveError } from '../../utils/apiRoute'
 import { isNotPersonalVaultItem } from '../../utils/drivePath'
-import { get, isHttpError } from '../../utils/http'
+import { isHttpError } from '../../utils/http'
 import { revealObfuscatedToken } from '../../utils/oAuthHandler'
 import { storeOdAuthTokens } from '../../utils/odAuthTokenStore'
-import { encodePath, runCorsMiddleware } from '../../utils/onedriveApi'
+import { driveItemUrl, encodePath, graphGet } from '../../utils/onedriveApi'
 import siteConfig from '../../utils/siteConfig'
 
 const driveItemSelect = 'name,size,id,lastModifiedDateTime,folder,file,video,image'
 const fileItemSelect = `${driveItemSelect},@microsoft.graph.downloadUrl`
-const isLikelyFilePath = (path: string) => /\.[^/.]+$/.test(path.split('/').pop() ?? '')
-const shouldFallbackToIdentity = (error: unknown) => {
-  if (!isHttpError(error)) return false
-  return error.response.status === 400 || error.response.status === 404
-}
+const shouldFallbackToIdentity = (error: unknown) =>
+  isHttpError(error) && (error.response.status === 400 || error.response.status === 404)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     const { obfuscatedAccessToken, accessTokenExpiry, obfuscatedRefreshToken } = req.body
-    const accessToken = revealObfuscatedToken(obfuscatedAccessToken)
-    const refreshToken = revealObfuscatedToken(obfuscatedRefreshToken)
-
-    if (typeof accessToken !== 'string' || typeof refreshToken !== 'string') {
-      res.status(400).send('Invalid request body')
-      return
-    }
-
-    await storeOdAuthTokens({ accessToken, accessTokenExpiry, refreshToken })
+    await storeOdAuthTokens({
+      accessToken: revealObfuscatedToken(obfuscatedAccessToken),
+      accessTokenExpiry,
+      refreshToken: revealObfuscatedToken(obfuscatedRefreshToken),
+    })
     res.status(200).send('OK')
     return
   }
 
-  const { path = '/', raw = false, next = '', sort = '' } = req.query
-
-  setDefaultCacheControl(res)
-
-  const pathQuery = normalisePathQuery(path, { trimTrailingSlash: true })
-  if ('error' in pathQuery) {
-    res.status(400).json({ error: pathQuery.error })
-    return
-  }
+  const { raw = false, next = '', sort = '' } = req.query
+  if (raw && handleCors(req, res)) return
 
   if (typeof sort !== 'string') {
     res.status(400).json({ error: 'Sort query invalid.' })
     return
   }
 
-  const accessToken = await requireAccessToken(res)
-  if (!accessToken) return
-
-  const cleanPath = pathQuery.path
-  const hasAccess = await verifyProtectedPath(res, cleanPath, accessToken, req.headers['od-protected-token'] as string)
-  if (!hasAccess) return
-
-  const isRoot = encodePath(cleanPath) === ''
-  const requestUrl = driveItemUrl(cleanPath)
-  const childrenUrl = driveItemUrl(cleanPath, '/children')
-
-  const fetchFolderData = async () => {
-    const { data } = await get(childrenUrl, {
-      headers: graphHeaders(accessToken),
-      params: {
-        select: driveItemSelect,
-        $top: siteConfig.maxItems,
-        ...(next ? { $skipToken: next } : {}),
-        ...(sort ? { $orderby: sort } : {}),
-      },
-    })
-
-    return data
-  }
-
-  const sendFolderData = (folderData: any) => {
-    const nextPage = nextPageToken(folderData['@odata.nextLink'])
-    const visibleFolderData =
-      isRoot && Array.isArray(folderData.value)
-        ? { ...folderData, value: folderData.value.filter(isNotPersonalVaultItem) }
-        : folderData
-    res.status(200).json({ folder: visibleFolderData, ...(nextPage ? { next: nextPage } : {}) })
-  }
-
-  if (raw) {
-    await runCorsMiddleware(req, res)
-    res.setHeader('Cache-Control', 'no-cache')
-
-    const { data } = await get(requestUrl, {
-      headers: graphHeaders(accessToken),
-      params: { select: 'id,@microsoft.graph.downloadUrl' },
-    })
-
-    if ('@microsoft.graph.downloadUrl' in data) {
-      res.redirect(data['@microsoft.graph.downloadUrl'])
-    } else {
-      res.status(404).json({ error: 'No download url found.' })
-    }
-    return
-  }
+  const authorized = await authorizePath(req, res)
+  if (!authorized) return
+  const { path, accessToken } = authorized
 
   try {
-    if (next) {
-      sendFolderData(await fetchFolderData())
+    if (raw) {
+      res.setHeader('Cache-Control', 'no-cache')
+      const data = await graphGet(driveItemUrl(path), accessToken, { select: 'id,@microsoft.graph.downloadUrl' })
+      if ('@microsoft.graph.downloadUrl' in data) res.redirect(data['@microsoft.graph.downloadUrl'])
+      else res.status(404).json({ error: 'No download url found.' })
       return
     }
 
-    if (!isLikelyFilePath(cleanPath)) {
+    const sendFolder = async () => {
+      const folder = await graphGet(driveItemUrl(path, '/children'), accessToken, {
+        select: driveItemSelect,
+        $top: siteConfig.maxItems,
+        $skipToken: next || undefined,
+        $orderby: sort || undefined,
+      })
+      if (encodePath(path) === '' && Array.isArray(folder.value)) {
+        folder.value = folder.value.filter(isNotPersonalVaultItem)
+      }
+      const nextPage = folder['@odata.nextLink']?.match(/&\$skiptoken=(.+)/i)?.[1]
+      res.status(200).json({ folder, ...(nextPage ? { next: nextPage } : {}) })
+    }
+
+    if (next) return await sendFolder()
+
+    if (!/\.[^/.]+$/.test(path)) {
       try {
-        sendFolderData(await fetchFolderData())
-        return
+        return await sendFolder()
       } catch (error) {
         if (!shouldFallbackToIdentity(error)) throw error
       }
     }
 
-    const { data: identityData } = await get(requestUrl, {
-      headers: graphHeaders(accessToken),
-      params: { select: fileItemSelect },
-    })
-
-    if ('folder' in identityData) {
-      sendFolderData(await fetchFolderData())
-      return
-    }
-    res.status(200).json({ file: identityData })
-    return
-  } catch (error: any) {
+    const item = await graphGet(driveItemUrl(path), accessToken, { select: fileItemSelect })
+    if ('folder' in item) return await sendFolder()
+    res.status(200).json({ file: item })
+  } catch (error) {
     sendDriveError(res, error)
-    return
   }
 }

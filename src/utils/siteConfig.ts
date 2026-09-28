@@ -7,8 +7,6 @@ export type PublicRuntimeConfig = {
   title: string
   baseDirectory: string
   maxItems: number
-  googleFontSans: string
-  googleFontMono: string
   googleFontLinks: string[]
   footer: string
   protectedRoutes: string[]
@@ -17,39 +15,22 @@ export type PublicRuntimeConfig = {
   datetimeFormat: string
 }
 
-export const defaultSiteConfig: PublicRuntimeConfig = {
-  icon: '/icons/128.png',
-  title: 'OneDrive',
-  baseDirectory: '/',
-  maxItems: 100,
-  googleFontSans: 'Inter',
-  googleFontMono: 'Fira Mono',
-  googleFontLinks: ['https://fonts.googleapis.com/css2?family=Fira+Mono&family=Inter:wght@400..700&display=swap'],
-  footer:
+const siteConfig: PublicRuntimeConfig = {
+  icon: getEnv('SITE_ICON', '/icons/128.png'),
+  title: getEnv('SITE_TITLE', 'OneDrive'),
+  baseDirectory: getEnv('BASE_DIRECTORY', '/'),
+  maxItems: parseNumberEnv('MAX_ITEMS', 100),
+  googleFontLinks: parseJsonEnv('GOOGLE_FONT_LINKS', [
+    'https://fonts.googleapis.com/css2?family=Fira+Mono&family=Inter:wght@400..700&display=swap',
+  ]),
+  footer: getEnv(
+    'SITE_FOOTER',
     'Powered by <a href="https://github.com/angr6908/murakumo" target="_blank" rel="noopener noreferrer">Murakumo</a>.',
-  protectedRoutes: [],
-  email: '',
-  links: [],
-  datetimeFormat: 'YYYY-MM-DD HH:mm:ss',
+  ),
+  protectedRoutes: parseJsonEnv('PROTECTED_ROUTES', []),
+  email: getEnv('SITE_EMAIL'),
+  links: parseJsonEnv('SITE_LINKS', []),
+  datetimeFormat: getEnv('DATETIME_FORMAT', 'YYYY-MM-DD HH:mm:ss'),
 }
-
-export function readSiteConfig(): PublicRuntimeConfig {
-  return {
-    icon: getEnv('SITE_ICON', defaultSiteConfig.icon),
-    title: getEnv('SITE_TITLE', defaultSiteConfig.title),
-    baseDirectory: getEnv('BASE_DIRECTORY', defaultSiteConfig.baseDirectory),
-    maxItems: parseNumberEnv('MAX_ITEMS', defaultSiteConfig.maxItems),
-    googleFontSans: getEnv('GOOGLE_FONT_SANS', defaultSiteConfig.googleFontSans),
-    googleFontMono: getEnv('GOOGLE_FONT_MONO', defaultSiteConfig.googleFontMono),
-    googleFontLinks: parseJsonEnv('GOOGLE_FONT_LINKS', defaultSiteConfig.googleFontLinks),
-    footer: getEnv('SITE_FOOTER', defaultSiteConfig.footer),
-    protectedRoutes: parseJsonEnv('PROTECTED_ROUTES', defaultSiteConfig.protectedRoutes),
-    email: getEnv('SITE_EMAIL', defaultSiteConfig.email),
-    links: parseJsonEnv('SITE_LINKS', defaultSiteConfig.links),
-    datetimeFormat: getEnv('DATETIME_FORMAT', defaultSiteConfig.datetimeFormat),
-  }
-}
-
-const siteConfig = readSiteConfig()
 
 export default siteConfig

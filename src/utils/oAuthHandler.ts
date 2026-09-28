@@ -6,10 +6,10 @@ import { isHttpError, post } from './http'
 
 const AES_SECRET_KEY = 'onedrive-vercel-index'
 
-export const obfuscateToken = (token: string) => AES.encrypt(token, AES_SECRET_KEY).toString()
+const obfuscateToken = (token: string) => AES.encrypt(token, AES_SECRET_KEY).toString()
 export const revealObfuscatedToken = (obfuscated: string) => AES.decrypt(obfuscated, AES_SECRET_KEY).toString(encUtf8)
 
-export function getClientSecret(): string {
+function getClientSecret(): string {
   return apiConfig.clientSecret || revealObfuscatedToken(apiConfig.obfuscatedClientSecret)
 }
 
@@ -59,7 +59,7 @@ export function exchangeToken(extraParams: Record<string, string>) {
 export async function requestTokenWithAuthCode(
   code: string,
 ): Promise<
-  | { expiryTime: string; accessToken: string; refreshToken: string }
+  | { expiryTime: number; accessToken: string; refreshToken: string }
   | { error: string; errorDescription: string; errorUri: string }
 > {
   try {
@@ -82,10 +82,10 @@ export async function requestTokenWithAuthCode(
   }
 }
 
-export async function sendTokenToServer(accessToken: string, refreshToken: string, expiryTime: string | number) {
+export async function sendTokenToServer(accessToken: string, refreshToken: string, expiryTime: number) {
   return post('/api', {
     obfuscatedAccessToken: obfuscateToken(accessToken),
-    accessTokenExpiry: Number(expiryTime),
+    accessTokenExpiry: expiryTime,
     obfuscatedRefreshToken: obfuscateToken(refreshToken),
   })
 }

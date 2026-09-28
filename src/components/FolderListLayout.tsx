@@ -1,10 +1,9 @@
 import Link from 'next/link'
 import { memo } from 'react'
 import { useI18n } from '../i18n'
-import type { OdFolderChildren } from '../types'
+import type { OdDriveItemBase } from '../types'
 import { getItemPath } from '../utils/drivePath'
 import { formatModifiedDateTime, humanFileSize } from '../utils/fileDetails'
-import { getStoredToken } from '../utils/protectedRouteHandler'
 import { useItemHover } from '../utils/useItemHover'
 import {
   Checkbox,
@@ -18,7 +17,7 @@ import {
 
 const metaClass = 'hidden whitespace-nowrap text-control text-muted-foreground tabular-nums md:block'
 
-const FileListItem = memo(function FileListItem({ fileContent: c }: { fileContent: OdFolderChildren }) {
+const FileListItem = memo(function FileListItem({ fileContent: c }: { fileContent: OdDriveItemBase }) {
   return (
     <>
       <div className="flex min-w-0 items-center gap-2.5 pr-2 pl-2 md:pr-0" title={c.name}>
@@ -35,7 +34,6 @@ const headerClass = 'hidden font-medium text-muted-foreground text-xs md:block'
 
 const FolderListLayout = (props: FolderLayoutProps) => {
   const { path, folderChildren, selected, toggleItemSelected } = props
-  const hashedToken = getStoredToken(path)
   const { t } = useI18n()
   const listRef = useItemHover<HTMLDivElement>()
 
@@ -52,7 +50,7 @@ const FolderListLayout = (props: FolderLayoutProps) => {
           <SelectedFilesControls {...props} className="hidden items-center pr-1 md:flex" selectTitle={t('Select files')} />
         </div>
 
-        {folderChildren.map((c: OdFolderChildren) => {
+        {folderChildren.map(c => {
           const itemPath = getItemPath(path, c.name)
 
           return (
@@ -76,7 +74,6 @@ const FolderListLayout = (props: FolderLayoutProps) => {
                   {...props}
                   child={c}
                   itemPath={itemPath}
-                  hashedToken={hashedToken}
                   className="flex items-center"
                 />
                 <div className="flex w-8 justify-center">

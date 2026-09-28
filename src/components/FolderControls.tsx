@@ -1,21 +1,25 @@
-import { Download, Folder, Link } from 'lucide-react'
+import { Download, Folder, Link, type LucideIcon } from 'lucide-react'
 import { type FC, type MouseEventHandler, useEffect, useRef } from 'react'
 import { useI18n } from '../i18n'
-import type { OdFolderChildren, OdFolderObject } from '../types'
+import type { OdDriveItemBase } from '../types'
 
+import { getRawExtension } from '../utils/fileType'
 import { getBaseUrl } from '../utils/getBaseUrl'
-import { getFileIcon, getRawExtension } from '../utils/getFileIcon'
+import { getFileIcon } from '../utils/getFileIcon'
 import { rawFileUrl } from '../utils/odUrls'
 import { useCopyLink } from '../utils/useCopyLink'
 import { Spinner } from './Loading'
 import Tip from './Tip'
 
+export type SelectionState = 0 | 1 | 2
+
 export type FolderLayoutProps = {
   path: string
-  folderChildren: OdFolderObject['value']
+  hashedToken: string | null
+  folderChildren: OdDriveItemBase[]
   selected: Record<string, boolean>
   toggleItemSelected: (id: string) => void
-  totalSelected: 0 | 1 | 2
+  totalSelected: SelectionState
   toggleTotalSelected: () => void
   totalGenerating: boolean
   handleSelectedDownload: () => void
@@ -25,6 +29,19 @@ export type FolderLayoutProps = {
 }
 
 const iconButtonClass = 'btn btn-icon btn-sm text-muted-foreground hover:text-foreground'
+
+const IconButton: FC<{ label: string; icon: LucideIcon; disabled?: boolean; onClick: () => void }> = ({
+  label,
+  icon: Icon,
+  disabled,
+  onClick,
+}) => (
+  <Tip label={label}>
+    <button type="button" className={iconButtonClass} aria-label={label} disabled={disabled} onClick={onClick}>
+      <Icon className="size-4" />
+    </button>
+  </Tip>
+)
 const emojiSegmenter =
   typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null
 const emojiPattern = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u
@@ -44,12 +61,12 @@ const formatChildName = (name: string) => {
   return emoji ? name.slice(emoji.length).trim() : name
 }
 
-export const isSelectableFile = (child: OdFolderChildren) => !child.folder && child.name !== '.password'
+export const isSelectableFile = (child: OdDriveItemBase) => !child.folder && child.name !== '.password'
 
 export const ChildName: FC<{ name: string; folder?: boolean }> = ({ name, folder }) => {
   const original = formatChildName(name)
   const extension = folder ? '' : getRawExtension(original)
-  const prename = folder ? original : original.substring(0, original.length - extension.length)
+  const prename = original.slice(0, original.length - extension.length)
 
   return (
     <span className="truncate before:float-right before:content-[attr(data-tail)]" data-tail={extension}>
@@ -58,7 +75,7 @@ export const ChildName: FC<{ name: string; folder?: boolean }> = ({ name, folder
   )
 }
 
-export const ChildIcon: FC<{ child: OdFolderChildren; className?: string }> = ({ child, className }) => {
+export const ChildIcon: FC<{ child: OdDriveItemBase; className?: string }> = ({ child, className }) => {
   const emoji = leadingEmoji(child.name)
   if (emoji) return <span className={className}>{emoji}</span>
   const Icon = child.file ? getFileIcon(child.name, { video: Boolean(child.video) }) : Folder
@@ -66,7 +83,7 @@ export const ChildIcon: FC<{ child: OdFolderChildren; className?: string }> = ({
 }
 
 export const Checkbox: FC<{
-  checked: 0 | 1 | 2
+  checked: SelectionState
   onChange: () => void
   title: string
 }> = ({ checked, onChange, title }) => {
@@ -100,7 +117,7 @@ export const Checkbox: FC<{
   )
 }
 
-export const Downloading: FC<{ title: string }> = ({ title }) => (
+const Downloading: FC<{ title: string }> = ({ title }) => (
   <Tip label={title}>
     <span className="btn btn-icon btn-sm text-muted-foreground" role="status" aria-label={title}>
       <Spinner />
@@ -128,31 +145,21 @@ export function SelectedFilesControls({
 
   return (
     <div className={className}>
-      <Tip label={t('Copy selected files permalink')}>
-        <button
-          type="button"
-          className={iconButtonClass}
-          aria-label={t('Copy selected files permalink')}
-          disabled={totalSelected === 0}
-          onClick={() => copyLink(handleSelectedPermalink(getBaseUrl()), t('Copied selected files permalink.'))}
-        >
-          <Link className="size-4" />
-        </button>
-      </Tip>
+      <IconButton
+        label={t('Copy selected files permalink')}
+        icon={Link}
+        disabled={totalSelected === 0}
+        onClick={() => copyLink(handleSelectedPermalink(getBaseUrl()), t('Copied selected files permalink.'))}
+      />
       {totalGenerating ? (
         <Downloading title={t('Downloading selected files, refresh page to cancel')} />
       ) : (
-        <Tip label={t('Download selected files')}>
-          <button
-            type="button"
-            className={iconButtonClass}
-            aria-label={t('Download selected files')}
-            disabled={totalSelected === 0}
-            onClick={handleSelectedDownload}
-          >
-            <Download className="size-4" />
-          </button>
-        </Tip>
+        <IconButton
+          label={t('Download selected files')}
+          icon={Download}
+          disabled={totalSelected === 0}
+          onClick={handleSelectedDownload}
+        />
       )}
       <Checkbox checked={totalSelected} onChange={toggleTotalSelected} title={selectTitle} />
     </div>
@@ -166,13 +173,10 @@ export function FolderChildActions({
   folderGenerating,
   handleFolderDownload,
   className,
-  downloadBaseUrl = '',
-}: Pick<FolderLayoutProps, 'folderGenerating' | 'handleFolderDownload'> & {
-  child: OdFolderChildren
+}: Pick<FolderLayoutProps, 'hashedToken' | 'folderGenerating' | 'handleFolderDownload'> & {
+  child: OdDriveItemBase
   itemPath: string
-  hashedToken: string | null
   className: string
-  downloadBaseUrl?: string
 }) {
   const copyLink = useCopyLink()
   const { t } = useI18n()
@@ -181,49 +185,30 @@ export function FolderChildActions({
     <div className={className}>
       {child.folder ? (
         <>
-          <Tip label={t('Copy folder permalink')}>
-            <button
-              type="button"
-              className={iconButtonClass}
-              aria-label={t('Copy folder permalink')}
-              onClick={() => copyLink(`${getBaseUrl()}${itemPath}`, t('Copied folder permalink.'))}
-            >
-              <Link className="size-4" />
-            </button>
-          </Tip>
+          <IconButton
+            label={t('Copy folder permalink')}
+            icon={Link}
+            onClick={() => copyLink(`${getBaseUrl()}${itemPath}`, t('Copied folder permalink.'))}
+          />
           {folderGenerating[child.id] ? (
             <Downloading title={t('Downloading folder, refresh page to cancel')} />
           ) : (
-            <Tip label={t('Download folder')}>
-              <button
-                type="button"
-                className={iconButtonClass}
-                aria-label={t('Download folder')}
-                onClick={handleFolderDownload(itemPath, child.id, child.name)}
-              >
-                <Download className="size-4" />
-              </button>
-            </Tip>
+            <IconButton
+              label={t('Download folder')}
+              icon={Download}
+              onClick={handleFolderDownload(itemPath, child.id, child.name)}
+            />
           )}
         </>
       ) : (
         <>
-          <Tip label={t('Copy raw file permalink')}>
-            <button
-              type="button"
-              className={iconButtonClass}
-              aria-label={t('Copy raw file permalink')}
-              onClick={() => copyLink(rawFileUrl(itemPath, hashedToken, getBaseUrl()), t('Copied raw file permalink.'))}
-            >
-              <Link className="size-4" />
-            </button>
-          </Tip>
+          <IconButton
+            label={t('Copy raw file permalink')}
+            icon={Link}
+            onClick={() => copyLink(rawFileUrl(itemPath, hashedToken, getBaseUrl()), t('Copied raw file permalink.'))}
+          />
           <Tip label={t('Download file')}>
-            <a
-              className={iconButtonClass}
-              aria-label={t('Download file')}
-              href={rawFileUrl(itemPath, hashedToken, downloadBaseUrl)}
-            >
+            <a className={iconButtonClass} aria-label={t('Download file')} href={rawFileUrl(itemPath, hashedToken)}>
               <Download className="size-4" />
             </a>
           </Tip>

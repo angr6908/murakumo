@@ -4,15 +4,15 @@ import { useRouter } from 'next/router'
 import OAuthCard, { Callout, inlineCodeClass } from '../../components/OAuthCard'
 import PageLayout from '../../components/PageLayout'
 import { useI18n } from '../../i18n'
-import { getLocaleProps, requestLocale } from '../../i18n/server'
+import { requestLocale } from '../../i18n/server'
 import { getOAuthPublicConfig, type OAuthPublicConfig } from '../../utils/apiConfig'
-import { getServerSidePublicConfigProps, type PublicConfigProps } from '../../utils/serverConfig'
+import { getPublicRuntimeConfig } from '../../utils/publicRuntimeConfig'
+import { getPageProps, type PageProps } from '../../utils/serverConfig'
 
 export default function OAuthStep1({
-  publicConfig,
   brandIcons,
   oauthConfig,
-}: PublicConfigProps & { oauthConfig: OAuthPublicConfig }) {
+}: PageProps & { oauthConfig: OAuthPublicConfig }) {
   const router = useRouter()
   const { t, rich } = useI18n()
   const configRows = [
@@ -26,7 +26,7 @@ export default function OAuthStep1({
 
   return (
     <PageLayout
-      title={t('OAuth Step {{step}} - {{title}}', { step: 1, title: publicConfig.title })}
+      title={t('OAuth Step {{step}} - {{title}}', { step: 1, title: getPublicRuntimeConfig().title })}
       brandIcons={brandIcons}
     >
       <OAuthCard icon={Sparkles} step={1} stepTitle={t('Preparations')}>
@@ -79,9 +79,5 @@ export default function OAuthStep1({
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ req }) => ({
-  props: {
-    ...getServerSidePublicConfigProps().props,
-    ...(await getLocaleProps(requestLocale(req))),
-    oauthConfig: getOAuthPublicConfig(),
-  },
+  props: { ...(await getPageProps(requestLocale(req))), oauthConfig: getOAuthPublicConfig() },
 })

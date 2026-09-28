@@ -27,3 +27,12 @@ export const dirname = (path: string) => path.slice(0, path.lastIndexOf('/'))
  */
 export const isNotPersonalVaultItem = (item: { name?: unknown }) =>
   (typeof item.name === 'string' ? item.name.normalize('NFKC').trim().toLowerCase() : '') !== 'personal vault'
+
+export function normalizePath(path: string): string {
+  const segments: string[] = []
+  for (const segment of path.split('/')) {
+    if (segment === '..') segments.pop()
+    else if (segment && segment !== '.') segments.push(segment)
+  }
+  return `/${segments.join('/')}`
+}

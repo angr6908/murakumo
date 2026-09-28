@@ -1,5 +1,7 @@
 import dayjs from 'dayjs'
 
+import type { OdFileObject } from '../types'
+import { getExtension } from './fileType'
 import { getPublicRuntimeConfig } from './publicRuntimeConfig'
 
 export const humanFileSize = (size: number) => {
@@ -16,3 +18,13 @@ export const humanFileSize = (size: number) => {
 export const formatModifiedDateTime = (lastModifiedDateTime: string) => {
   return dayjs(lastModifiedDateTime).format(getPublicRuntimeConfig().datetimeFormat)
 }
+
+export const formatFileSummary = (file: OdFileObject, ...extra: (string | undefined)[]) =>
+  [
+    getExtension(file.name).toUpperCase(),
+    ...extra,
+    humanFileSize(file.size),
+    formatModifiedDateTime(file.lastModifiedDateTime),
+  ]
+    .filter(Boolean)
+    .join(' · ')

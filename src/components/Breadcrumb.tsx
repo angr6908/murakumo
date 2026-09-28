@@ -32,26 +32,23 @@ const Breadcrumb: React.FC<{ query?: QueryMap }> = ({ query }) => {
     // Render in reverse so the browser scrolls to the end of the breadcrumb.
     return (
       <ol className="no-scrollbar inline-flex min-w-0 flex-row-reverse items-center overflow-x-scroll text-control">
-        {path
-          .slice()
-          .reverse()
-          .map((p: string, i: number) => {
-            // Each crumb targets a distinct prefix of the path, so its href is a stable unique key
-            const href = `/${encodeSegments(path.slice(0, path.length - i))}`
-            return (
-              <li key={href} className="flex shrink-0 items-center">
-                <ChevronIcon className="size-3.5 text-muted-foreground" />
-                <Link
-                  href={href}
-                  passHref
-                  className={crumbClass(i === 0)}
-                  aria-current={i === 0 ? 'page' : undefined}
-                >
-                  {p}
-                </Link>
-              </li>
-            )
-          })}
+        {path.toReversed().map((p, i) => {
+          // Each crumb targets a distinct prefix of the path, so its href is a stable unique key
+          const href = `/${encodeSegments(path.slice(0, path.length - i))}`
+          return (
+            <li key={href} className="flex shrink-0 items-center">
+              <ChevronIcon className="size-3.5 text-muted-foreground" />
+              <Link
+                href={href}
+                passHref
+                className={crumbClass(i === 0)}
+                aria-current={i === 0 ? 'page' : undefined}
+              >
+                {p}
+              </Link>
+            </li>
+          )
+        })}
         <li className="shrink-0">
           <HomeCrumb current={false} />
         </li>

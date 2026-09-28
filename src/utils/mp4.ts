@@ -1,4 +1,4 @@
-export type Box = { type: string; offset: number; header: number; size: number }
+type Box = { type: string; offset: number; header: number; size: number }
 
 export type Mp4ProbeTrack = { id: number; type: string; name: string; language: string; codec?: string }
 export type Mp4Probe = { moov: { offset: number; size: number }; fragmented: boolean; tracks: Mp4ProbeTrack[] }
@@ -51,7 +51,7 @@ const probeChunkSize = 4096
 const probeBlockSize = 65536
 const decoder = new TextDecoder()
 
-export const fourcc = (view: DataView, offset: number) =>
+const fourcc = (view: DataView, offset: number) =>
   String.fromCharCode(
     view.getUint8(offset),
     view.getUint8(offset + 1),
@@ -59,7 +59,7 @@ export const fourcc = (view: DataView, offset: number) =>
     view.getUint8(offset + 3),
   )
 
-export function* boxes(view: DataView, start: number, end: number): Generator<Box> {
+function* boxes(view: DataView, start: number, end: number): Generator<Box> {
   let offset = start
   const limit = Math.min(end, view.byteLength)
   while (offset + 8 <= limit) {
@@ -73,8 +73,16 @@ export function* boxes(view: DataView, start: number, end: number): Generator<Bo
   }
 }
 
+export const fetchRange = (url: string, start: number, length: number, signal?: AbortSignal) =>
+  fetch(url, { headers: { Range: `bytes=${start}-${start + length - 1}` }, signal })
+
+function findBox(view: DataView, start: number, end: number, match: (type: string) => boolean) {
+  for (const box of boxes(view, start, end)) if (match(box.type)) return box
+  return undefined
+}
+
 const child = (view: DataView, parent: Box, type: string) =>
-  [...boxes(view, parent.offset + parent.header, parent.offset + parent.size)].find(box => box.type === type)
+  findBox(view, parent.offset + parent.header, parent.offset + parent.size, boxType => boxType === type)
 
 const descendant = (view: DataView, parent: Box | undefined, ...path: string[]) =>
   path.reduce<Box | undefined>((box, type) => box && child(view, box, type), parent)
@@ -152,12 +160,12 @@ function hevcCodec(type: string, view: DataView, hvcC: Box) {
   ].join('.')
 }
 
-export function codecString(view: DataView, stsd: Box): string | undefined {
+function codecString(view: DataView, stsd: Box): string | undefined {
   const [entry] = boxes(view, payload(stsd) + 8, stsd.offset + stsd.size)
   if (!entry) return undefined
   const { type } = entry
   const end = entry.offset + entry.size
-  const find = (start: number, name: string) => [...boxes(view, start, end)].find(box => box.type === name)
+  const find = (start: number, name: string) => findBox(view, start, end, boxType => boxType === name)
   const videoChildren = payload(entry) + 78
   const soundVersion = view.getUint16(payload(entry) + 8)
   const audioChildren = payload(entry) + 28 + (soundVersion === 1 ? 16 : soundVersion === 2 ? 36 : 0)
@@ -205,26 +213,36 @@ export function codecString(view: DataView, stsd: Box): string | undefined {
   }
 }
 
-function probeTrack(view: DataView, trak: Box): Mp4ProbeTrack | undefined {
+function readTrackHeader(view: DataView, trak: Box) {
   const tkhd = child(view, trak, 'tkhd')
   const mdia = child(view, trak, 'mdia')
   const mdhd = mdia && child(view, mdia, 'mdhd')
   const hdlr = mdia && child(view, mdia, 'hdlr')
-  if (!tkhd || !mdhd || !hdlr) return undefined
+  if (!tkhd || !mdia || !mdhd || !hdlr) return undefined
   const tkhdStart = payload(tkhd)
-  const stsd = descendant(view, mdia, 'minf', 'stbl', 'stsd')
   const handler = readHandler(view, hdlr)
   return {
+    tkhd,
+    mdia,
+    mdhd,
+    hdlr,
     id: view.getUint32(tkhdStart + (view.getUint8(tkhdStart) === 1 ? 20 : 12)),
     type: handler.type,
     name: handler.name,
-    language: readMdhd(view, mdhd).language,
-    codec: stsd ? codecString(view, stsd) : undefined,
+    ...readMdhd(view, mdhd),
   }
 }
 
+function probeTrack(view: DataView, trak: Box): Mp4ProbeTrack | undefined {
+  const header = readTrackHeader(view, trak)
+  if (!header) return undefined
+  const stsd = descendant(view, header.mdia, 'minf', 'stbl', 'stsd')
+  const { id, type, name, language } = header
+  return { id, type, name, language, codec: stsd ? codecString(view, stsd) : undefined }
+}
+
 async function readRange(url: string, start: number, length: number, signal?: AbortSignal) {
-  const resp = await fetch(url, { headers: { Range: `bytes=${start}-${start + length - 1}` }, signal })
+  const resp = await fetchRange(url, start, length, signal)
   if (resp.status !== 206) {
     await resp.body?.cancel()
     throw new Error(`Range request failed: ${resp.status}`)
@@ -267,36 +285,33 @@ export async function probeMp4(url: string, signal?: AbortSignal): Promise<Mp4Pr
   return { moov: { offset: moov.offset, size: moov.size }, fragmented, tracks }
 }
 
-const upperBound = (values: ArrayLike<number>, value: number) => {
+const firstIndex = (length: number, test: (index: number) => boolean) => {
   let low = 0
-  let high = values.length
+  let high = length
   while (low < high) {
     const mid = (low + high) >>> 1
-    if (values[mid] <= value) low = mid + 1
-    else high = mid
+    if (test(mid)) high = mid
+    else low = mid + 1
   }
   return low
 }
 
+const upperBound = (values: ArrayLike<number>, value: number) => firstIndex(values.length, index => values[index] > value)
+
 function readTrack(view: DataView, trak: Box, movieTimescale: number): Mp4Track | undefined {
-  const tkhd = child(view, trak, 'tkhd')
-  const mdia = child(view, trak, 'mdia')
-  const mdhd = mdia && child(view, mdia, 'mdhd')
-  const hdlr = mdia && child(view, mdia, 'hdlr')
-  const minf = mdia && child(view, mdia, 'minf')
+  const header = readTrackHeader(view, trak)
+  const minf = header && child(view, header.mdia, 'minf')
   const stbl = minf && child(view, minf, 'stbl')
-  const mediaHeader = minf && [...boxes(view, payload(minf), minf.offset + minf.size)].find(box => box.type.endsWith('mhd'))
+  const mediaHeader = minf && findBox(view, payload(minf), minf.offset + minf.size, type => type.endsWith('mhd'))
   const stsd = stbl && child(view, stbl, 'stsd')
   const stts = stbl && child(view, stbl, 'stts')
   const stsc = stbl && child(view, stbl, 'stsc')
   const stsz = stbl && child(view, stbl, 'stsz')
   const stco = stbl && (child(view, stbl, 'stco') ?? child(view, stbl, 'co64'))
-  if (!tkhd || !mdhd || !hdlr || !mediaHeader || !stsd || !stts || !stsc || !stsz || !stco) return undefined
+  if (!header || !stbl || !mediaHeader || !stsd || !stts || !stsc || !stsz || !stco) return undefined
 
   const bytes = (box: Box) => new Uint8Array(view.buffer, view.byteOffset + box.offset, box.size)
-  const tkhdStart = payload(tkhd)
-  const { timescale, language } = readMdhd(view, mdhd)
-  const handler = readHandler(view, hdlr)
+  const { timescale } = header
 
   const sttsCount = view.getUint32(payload(stts) + 4)
   const runSample = new Float64Array(sttsCount + 1)
@@ -311,10 +326,11 @@ function readTrack(view: DataView, trak: Box, movieTimescale: number): Mp4Track 
 
   const ctts = child(view, stbl, 'ctts')
   const cttsCount = ctts ? view.getUint32(payload(ctts) + 4) : 0
+  const cttsTable = ctts ? payload(ctts) + 8 : 0
   const cttsSample = new Float64Array(cttsCount + 1)
   const cttsOffset = new Int32Array(cttsCount)
   for (let i = 0; i < cttsCount; i++) {
-    const entry = payload(ctts as Box) + 8 + i * 8
+    const entry = cttsTable + i * 8
     cttsOffset[i] = view.getInt32(entry + 4)
     cttsSample[i + 1] = cttsSample[i] + view.getUint32(entry)
   }
@@ -371,19 +387,19 @@ function readTrack(view: DataView, trak: Box, movieTimescale: number): Mp4Track 
   const stscRunBySample = (sample: number) => Math.max(0, upperBound(stscFirstSample, sample) - 1)
 
   return {
-    id: view.getUint32(tkhdStart + (view.getUint8(tkhdStart) === 1 ? 20 : 12)),
-    type: handler.type,
-    name: handler.name,
-    language,
+    id: header.id,
+    type: header.type,
+    name: header.name,
+    language: header.language,
     codec: codecString(view, stsd),
     timescale,
     presentationOffset,
     sampleCount,
     chunkCount,
     orderedChunks,
-    tkhd: bytes(tkhd),
-    mdhd: bytes(mdhd),
-    hdlr: bytes(hdlr),
+    tkhd: bytes(header.tkhd),
+    mdhd: bytes(header.mdhd),
+    hdlr: bytes(header.hdlr),
     mediaHeader: bytes(mediaHeader),
     stsd: bytes(stsd),
     hasCtts: cttsCount > 0,
@@ -413,16 +429,7 @@ function readTrack(view: DataView, trak: Box, movieTimescale: number): Mp4Track 
       const run = stscRunBySample(sample)
       return stscChunk[run] + Math.floor((sample - stscFirstSample[run]) / stscSpc[run])
     },
-    firstChunkAtOrAfter(offset) {
-      let low = 0
-      let high = chunkCount
-      while (low < high) {
-        const mid = (low + high) >>> 1
-        if (chunkOffset(mid) < offset) low = mid + 1
-        else high = mid
-      }
-      return low
-    },
+    firstChunkAtOrAfter: offset => firstIndex(chunkCount, chunk => chunkOffset(chunk) >= offset),
   }
 }
 
@@ -458,7 +465,7 @@ export function parseMoov(buffer: ArrayBuffer): Mp4Movie {
   const duration = v1 ? Number(view.getBigUint64(payload(mvhd) + 24)) : view.getUint32(payload(mvhd) + 16)
   const children = [...boxes(view, payload(moov), moov.offset + moov.size)]
   const traks = children.filter(box => box.type === 'trak')
-  const tracks = traks.map(trak => readTrack(view, trak, timescale)).filter((track): track is Mp4Track => Boolean(track))
+  const tracks = traks.map(trak => readTrack(view, trak, timescale)).filter(track => track !== undefined)
   const chapterIds = new Set(
     traks.flatMap(trak => {
       const chap = descendant(view, trak, 'tref', 'chap')
@@ -469,7 +476,7 @@ export function parseMoov(buffer: ArrayBuffer): Mp4Movie {
   return {
     timescale,
     duration,
-    fragmented: Boolean(child(view, moov, 'mvex')),
+    fragmented: children.some(box => box.type === 'mvex'),
     tracks,
     chapters: udta ? readNeroChapters(view, udta) : [],
     chapterTrack: tracks.find(track => chapterIds.has(track.id)),

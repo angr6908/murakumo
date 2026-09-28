@@ -6,13 +6,13 @@ import { type FC, useEffect, useState } from 'react'
 
 import { useI18n } from '../../i18n'
 import type { OdFileObject } from '../../types'
-import { formatModifiedDateTime, humanFileSize } from '../../utils/fileDetails'
-import { getExtension, stripExtension } from '../../utils/getFileIcon'
+import { getExtension } from '../../utils/fileType'
 import { directFileUrl, thumbnailUrl } from '../../utils/odUrls'
 import { readOpusCover } from '../../utils/opusCover'
 import { useCurrentPathToken } from '../../utils/useCurrentPathToken'
 import DownloadButtonGroup from '../DownloadBtnGtoup'
 import { Spinner } from '../Loading'
+import { MediaHeading } from './Containers'
 
 import '@videojs/react/audio/skin.css'
 
@@ -79,21 +79,13 @@ const AudioPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   }, [isOpus, audioUrl, thumbnail])
 
   const coverSrc = isOpus ? (embedded?.key === audioUrl ? embedded.src : undefined) : thumbnail
-  const details = [
-    getExtension(file.name).toUpperCase(),
-    humanFileSize(file.size),
-    formatModifiedDateTime(file.lastModifiedDateTime),
-  ]
 
   return (
     <AudioPlayer title={file.name}>
       <div className="flex flex-col items-center gap-6 px-4 pt-2 pb-6 sm:flex-row sm:gap-8 sm:px-0">
         <Cover key={thumbnail} src={coverSrc} alt={file.name} wide={isOpus} />
         <div className="flex w-full min-w-0 flex-col gap-5 text-center sm:text-left">
-          <div className="flex flex-col gap-1">
-            <h1 className="break-words font-semibold text-xl sm:text-2xl">{stripExtension(file.name)}</h1>
-            <p className="text-control text-muted-foreground tabular-nums">{details.join(' · ')}</p>
-          </div>
+          <MediaHeading file={file} className="text-xl sm:text-2xl" />
           <PlayerI18n locale={locale}>
             <AudioSkin className="w-full">
               <Audio src={audioUrl} preload="metadata" />

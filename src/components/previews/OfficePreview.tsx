@@ -1,5 +1,4 @@
-import Preview from 'preview-office-docs'
-import { type FC, useEffect, useRef, useState } from 'react'
+import type { FC } from 'react'
 import type { OdFileObject } from '../../types'
 import { getBaseUrl } from '../../utils/getBaseUrl'
 import { directFileUrl } from '../../utils/odUrls'
@@ -8,24 +7,17 @@ import { DownloadFooter } from './Containers'
 
 const OfficePreview: FC<{ file: OdFileObject }> = ({ file }) => {
   const { asPath, hashedToken } = useCurrentPathToken()
-
-  const docContainer = useRef<HTMLDivElement>(null)
-  const [docContainerWidth, setDocContainerWidth] = useState(600)
-
   const docUrl = encodeURIComponent(directFileUrl(file, asPath, hashedToken, getBaseUrl()))
-
-  useEffect(() => {
-    setDocContainerWidth(docContainer.current?.offsetWidth ?? 600)
-  }, [])
 
   return (
     <div>
-      <div
-        className="surface scroll-thin overflow-auto sm:rounded-popup"
-        ref={docContainer}
-        style={{ maxHeight: '90vh' }}
-      >
-        <Preview url={docUrl} width={docContainerWidth.toString()} height="600" />
+      <div className="surface scroll-thin overflow-auto sm:rounded-popup" style={{ maxHeight: '90vh' }}>
+        <iframe
+          src={`https://view.officeapps.live.com/op/embed.aspx?src=${docUrl}`}
+          width="100%"
+          height="600"
+          frameBorder="0"
+        />
       </div>
       <DownloadFooter />
     </div>

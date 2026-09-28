@@ -2,7 +2,7 @@ import type { OdFileObject } from '../types'
 
 type ThumbnailSize = 'large' | 'medium' | 'small'
 
-export function appendProtectedToken(url: string, token?: string | null): string {
+function appendProtectedToken(url: string, token?: string | null): string {
   return token ? `${url}${url.includes('?') ? '&' : '?'}odpt=${token}` : url
 }
 

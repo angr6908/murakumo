@@ -1,4 +1,5 @@
 import { get, put } from '@vercel/blob'
+import { getEnv } from './env'
 
 type StoredTokens = {
   accessToken?: string
@@ -6,11 +7,10 @@ type StoredTokens = {
   refreshToken?: string
 }
 
-const tokenBlobPath = process.env.AUTH_TOKEN_BLOB_PATH || 'onedrive-auth-tokens.json'
-const blobAuthOptions =
-  process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN
-    ? { storeId: process.env.BLOB_STORE_ID, oidcToken: process.env.VERCEL_OIDC_TOKEN }
-    : {}
+const tokenBlobPath = getEnv('AUTH_TOKEN_BLOB_PATH', 'onedrive-auth-tokens.json')
+const storeId = getEnv('BLOB_STORE_ID')
+const oidcToken = getEnv('VERCEL_OIDC_TOKEN')
+const blobAuthOptions = storeId && oidcToken ? { storeId, oidcToken } : {}
 
 function parseStoredTokens(content: string, source: string): StoredTokens {
   try {
@@ -24,7 +24,7 @@ function parseStoredTokens(content: string, source: string): StoredTokens {
   }
 }
 
-const hasFreshAccessToken = (tokens: StoredTokens): boolean =>
+const hasFreshAccessToken = (tokens: StoredTokens): tokens is StoredTokens & { accessToken: string } =>
   typeof tokens.accessToken === 'string' &&
   typeof tokens.accessTokenExpiresAt === 'number' &&
   tokens.accessTokenExpiresAt > Date.now()
@@ -70,7 +70,7 @@ async function writeTokens(tokens: StoredTokens): Promise<void> {
 export async function getOdAuthTokens(): Promise<{ accessToken: string | null; refreshToken: string | null }> {
   const tokens = await readTokens()
   return {
-    accessToken: hasFreshAccessToken(tokens) ? (tokens.accessToken as string) : null,
+    accessToken: hasFreshAccessToken(tokens) ? tokens.accessToken : null,
     refreshToken: tokens.refreshToken ?? null,
   }
 }

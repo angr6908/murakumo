@@ -5,20 +5,16 @@ import { LayoutGrid, LayoutList, type LucideIcon } from 'lucide-react'
 import { useI18n } from '../i18n'
 import useLocalStorage from '../utils/useLocalStorage'
 
-const layouts: Array<{ id: number; name: 'Grid' | 'List'; icon: LucideIcon }> = [
-  { id: 1, name: 'List', icon: LayoutList },
-  { id: 2, name: 'Grid', icon: LayoutGrid },
+const layouts: Array<{ name: 'Grid' | 'List'; icon: LucideIcon }> = [
+  { name: 'List', icon: LayoutList },
+  { name: 'Grid', icon: LayoutGrid },
 ]
 
 export const useLayout = () => {
-  const [stored, setStored] = useLocalStorage<{ id: number; name: string }>('preferredLayout', {
-    id: layouts[0].id,
-    name: layouts[0].name,
-  })
+  const [stored, setStored] = useLocalStorage<{ name: string }>('preferredLayout', { name: layouts[0].name })
   const layout = layouts.find(l => l.name === stored?.name) ?? layouts[0]
   const setLayout = (name: string) => {
-    const next = layouts.find(l => l.name === name)
-    if (next) setStored({ id: next.id, name: next.name })
+    if (layouts.some(l => l.name === name)) setStored({ name })
   }
   return [layout, setLayout] as const
 }
@@ -44,7 +40,7 @@ const SwitchLayout = () => {
             className="flex flex-col gap-0.5"
           >
             {layouts.map(option => (
-              <Menu.RadioItem key={option.id} value={option.name} className="menu-item">
+              <Menu.RadioItem key={option.name} value={option.name} className="menu-item">
                 <option.icon className="size-4" />
                 <span>{t(option.name)}</span>
                 <Menu.ItemIndicator checked={option.name === layout.name} className="menu-item-indicator">

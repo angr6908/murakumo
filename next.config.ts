@@ -18,23 +18,19 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   async rewrites() {
-    return {
-      beforeFiles: [],
-      afterFiles: [
-        {
-          source: everyPath,
-          has: [{ type: 'cookie', key: localeCookie, value: `(?<lang>${locales.join('|')})` }],
-          destination: localised(':lang'),
-        },
-        ...acceptLanguageRules.map(({ locale, value }) => ({
-          source: everyPath,
-          has: [{ type: 'header' as const, key: 'accept-language', value }],
-          destination: localised(locale),
-        })),
-        { source: everyPath, destination: localised('en') },
-      ],
-      fallback: [],
-    }
+    return [
+      {
+        source: everyPath,
+        has: [{ type: 'cookie', key: localeCookie, value: `(?<lang>${locales.join('|')})` }],
+        destination: localised(':lang'),
+      },
+      ...acceptLanguageRules.map(({ locale, value }) => ({
+        source: everyPath,
+        has: [{ type: 'header' as const, key: 'accept-language', value }],
+        destination: localised(locale),
+      })),
+      { source: everyPath, destination: localised('en') },
+    ]
   },
 }
 

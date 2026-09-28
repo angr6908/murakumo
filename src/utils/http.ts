@@ -11,7 +11,7 @@
  *   - `isHttpError(error)` and `error.response`    -> `{ status, data }`
  */
 
-export type HttpError = {
+type HttpError = {
   response: {
     status: number
     data: unknown
@@ -24,78 +24,53 @@ export const isHttpError = (error: unknown): error is HttpError =>
   'response' in error &&
   typeof (error as HttpError).response?.status === 'number'
 
-type QueryParams = Record<string, string | number | boolean | string[] | undefined>
+export type QueryParams = Record<string, string | number | string[] | undefined>
 
-const buildUrl = (url: string, params?: QueryParams): string => {
-  if (!params) return url
-  const searchParams = new URLSearchParams()
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined) continue
-    if (Array.isArray(value)) {
-      for (const v of value) searchParams.append(key, String(v))
-    } else {
-      searchParams.set(key, String(value))
-    }
-  }
-  const query = searchParams.toString()
+const buildUrl = (url: string, params: QueryParams = {}): string => {
+  const query = new URLSearchParams(
+    Object.entries(params).flatMap(([key, value]) =>
+      value === undefined ? [] : [value].flat().map(item => [key, String(item)]),
+    ),
+  ).toString()
   return query ? `${url}${url.includes('?') ? '&' : '?'}${query}` : url
 }
 
-const toHttpError = async (response: Response): Promise<HttpError> => {
-  let data: unknown = null
+const readBody = async (response: Response): Promise<any> => {
+  const text = await response.text().catch(() => null)
   try {
-    data = await response.text()
-    try {
-      data = JSON.parse(data as string)
-    } catch {
-      // keep raw text
-    }
+    return text && JSON.parse(text)
   } catch {
-    // ignore body read failures
+    return text
   }
-  return { response: { status: response.status, data } }
+}
+
+async function send(url: string, init: RequestInit): Promise<{ data: any }> {
+  const response = await fetch(url, init)
+  const data = await readBody(response)
+  if (!response.ok) throw { response: { status: response.status, data } } satisfies HttpError
+  return { data }
 }
 
 /**
  * Perform a GET and parse the JSON body. Throws an `HttpError` (with `.response`)
  * on non-2xx so callers can read `error.response.status` / `.data`, matching axios.
  */
-export async function get(
-  url: string,
-  { headers, params }: { headers?: Record<string, string>; params?: QueryParams } = {},
-): Promise<{ data: any; headers: Headers }> {
-  const response = await fetch(buildUrl(url, params), { headers })
-  if (!response.ok) throw await toHttpError(response)
-  const data = await response.json().catch(() => undefined)
-  return { data, headers: response.headers }
+export function get(url: string, { headers, params }: { headers?: Record<string, string>; params?: QueryParams } = {}) {
+  return send(buildUrl(url, params), { headers })
 }
 
 /**
- * Perform a POST. `body` may be a `URLSearchParams` or a JSON-serialisable object;
- * when the caller supplies `application/json` headers the object is stringified.
+ * Perform a POST. `body` may be a `URLSearchParams` or a JSON-serialisable object.
  * Throws an `HttpError` on non-2xx.
  */
-export async function post(
+export function post(
   url: string,
-  body: URLSearchParams | Record<string, unknown> | string,
+  body: URLSearchParams | Record<string, unknown>,
   { headers }: { headers?: Record<string, string> } = {},
-): Promise<{ data: any }> {
-  let payload: BodyInit | undefined
-  const requestHeaders: Record<string, string> = { ...headers }
-
-  if (body instanceof URLSearchParams) {
-    payload = body
-  } else if (typeof body === 'string') {
-    payload = body
-  } else {
-    if (!requestHeaders['Content-Type']) requestHeaders['Content-Type'] = 'application/json'
-    payload = JSON.stringify(body)
-  }
-
-  const response = await fetch(url, { method: 'POST', headers: requestHeaders, body: payload })
-  if (!response.ok) throw await toHttpError(response)
-  const data = await response.json().catch(() => undefined)
-  return { data }
+) {
+  return body instanceof URLSearchParams
+    ? send(url, { method: 'POST', headers, body })
+    : send(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) })
 }
 
 /**
@@ -108,10 +83,7 @@ export async function getStream(
   { headers }: { headers?: Record<string, string> } = {},
 ): Promise<{ data: ReadableStream; headers: Headers }> {
   const response = await fetch(url, { headers })
-  if (!response.ok) {
-    await response.body?.cancel()
-    throw await toHttpError(response)
-  }
+  if (!response.ok) throw { response: { status: response.status, data: await readBody(response) } } satisfies HttpError
   if (!response.body) throw new Error('Response has no body stream.')
   return { data: response.body, headers: response.headers }
 }

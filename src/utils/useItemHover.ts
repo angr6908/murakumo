@@ -58,17 +58,15 @@ export function useItemHover<T extends HTMLElement>() {
       hovered.querySelector(':scope > a[href]')?.dispatchEvent(new MouseEvent('click', event))
     }
 
-    document.addEventListener('pointermove', track)
-    document.addEventListener('pointerover', onPointerOver)
-    document.addEventListener('pointerout', onPointerOut)
-    window.addEventListener('scroll', onScroll)
-    root.addEventListener('click', onClick)
+    const controller = new AbortController()
+    const { signal } = controller
+    document.addEventListener('pointermove', track, { signal })
+    document.addEventListener('pointerover', onPointerOver, { signal })
+    document.addEventListener('pointerout', onPointerOut, { signal })
+    window.addEventListener('scroll', onScroll, { signal })
+    root.addEventListener('click', onClick, { signal })
     return () => {
-      document.removeEventListener('pointermove', track)
-      document.removeEventListener('pointerover', onPointerOver)
-      document.removeEventListener('pointerout', onPointerOut)
-      window.removeEventListener('scroll', onScroll)
-      root.removeEventListener('click', onClick)
+      controller.abort()
       clearTimeout(settle)
       settled()
       hover(null)

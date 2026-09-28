@@ -4,19 +4,15 @@ import { type FC, useState } from 'react'
 
 import { useI18n } from '../i18n'
 import { matchProtectedRoute } from '../utils/protectedRouteHandler'
-import useLocalStorage from '../utils/useLocalStorage'
 import Tip from './Tip'
 
 const Auth: FC<{ redirect: string }> = ({ redirect }) => {
-  const authTokenPath = matchProtectedRoute(redirect)
-
   const router = useRouter()
   const { t } = useI18n()
   const [token, setToken] = useState('')
-  const [, setPersistedToken] = useLocalStorage(authTokenPath, '')
 
   const submit = () => {
-    setPersistedToken(token)
+    localStorage.setItem(matchProtectedRoute(redirect), JSON.stringify(token))
     router.reload()
   }
 

@@ -4,15 +4,14 @@ import { useRouter } from 'next/router'
 import { type FC, type ReactElement, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useI18n } from '../i18n'
-import type { OdFileObject, OdFolderObject } from '../types'
-import { basename, getItemPath, isNotPersonalVaultItem, type QueryMap, queryToPath } from '../utils/drivePath'
+import type { OdDriveItemBase, OdFileObject } from '../types'
+import { basename, getItemPath, type QueryMap, queryToPath } from '../utils/drivePath'
 import { useProtectedSWRInfinite } from '../utils/fetchWithSWR'
-import { getExtension } from '../utils/getFileIcon'
-import { getPreviewType, preview } from '../utils/getPreviewType'
+import { type FileCategory, getFileCategory } from '../utils/fileType'
 import { rawFileUrl } from '../utils/odUrls'
 import { getStoredToken } from '../utils/protectedRouteHandler'
 import Auth from './Auth'
-import { isSelectableFile } from './FolderControls'
+import { isSelectableFile, type SelectionState } from './FolderControls'
 import FolderGridLayout from './FolderGridLayout'
 import FolderListLayout from './FolderListLayout'
 import FourOhFour from './FourOhFour'
@@ -50,30 +49,26 @@ const EPUBPreview = dynamic(() => import('./previews/EPUBPreview'), { loading: P
 
 type PreviewRenderer = (file: OdFileObject, path: string) => ReactElement
 
-const previewRenderers: Record<string, PreviewRenderer> = {
-  [preview.image]: file => <ImagePreview file={file} />,
-  [preview.text]: () => <TextPreview />,
-  [preview.code]: file => <CodePreview file={file} />,
-  [preview.markdown]: (file, path) => <MarkdownPreview file={file} path={path} />,
-  [preview.video]: file => <VideoPreview file={file} />,
-  [preview.audio]: file => <AudioPreview file={file} />,
-  [preview.pdf]: file => <PDFPreview file={file} />,
-  [preview.office]: file => <OfficePreview file={file} />,
-  [preview.epub]: file => <EPUBPreview file={file} />,
-  [preview.url]: () => <URLPreview />,
-  default: file => <DefaultPreview file={file} />,
+const previewRenderers: Partial<Record<FileCategory, PreviewRenderer>> = {
+  image: file => <ImagePreview file={file} />,
+  text: () => <TextPreview />,
+  code: file => <CodePreview file={file} />,
+  markdown: (file, path) => <MarkdownPreview file={file} path={path} />,
+  video: file => <VideoPreview file={file} />,
+  audio: file => <AudioPreview file={file} />,
+  pdf: file => <PDFPreview file={file} />,
+  office: file => <OfficePreview file={file} />,
+  epub: file => <EPUBPreview file={file} />,
+  url: () => <URLPreview />,
 }
 
 const renderFilePreview = (file: OdFileObject, path: string) => {
-  const previewType = getPreviewType(getExtension(file.name), { video: Boolean(file.video) })
-  const renderer = previewType ? previewRenderers[previewType] : undefined
-  return (renderer ?? previewRenderers.default)(file, path)
+  const category = getFileCategory(file.name, { video: Boolean(file.video) })
+  const render = category && previewRenderers[category]
+  return render ? render(file, path) : <DefaultPreview file={file} />
 }
 
-type SelectedFiles = Record<string, boolean>
-type SelectionState = 0 | 1 | 2
-
-const getSelectionState = (files: OdFolderObject['value'], selected: SelectedFiles): SelectionState => {
+const getSelectionState = (files: OdDriveItemBase[], selected: Record<string, boolean>): SelectionState => {
   const hasSelected = files.some(file => selected[file.id])
   const hasUnselected = files.some(file => !selected[file.id])
 
@@ -81,7 +76,7 @@ const getSelectionState = (files: OdFolderObject['value'], selected: SelectedFil
 }
 
 const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
-  const [selected, setSelected] = useState<SelectedFiles>({})
+  const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [totalGenerating, setTotalGenerating] = useState(false)
   const [folderGenerating, setFolderGenerating] = useState<Record<string, boolean>>({})
 
@@ -93,20 +88,17 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
 
   const { data, error, size, setSize, hashedToken } = useProtectedSWRInfinite(path)
 
-  // Derived once per fetched page rather than on every selection toggle — normalising and
-  // filtering every child is otherwise repeated on each re-render of the listing.
   const folderView = useMemo(() => {
     if (!data?.length || !data[0] || !('folder' in data[0])) return null
 
-    const allFolderChildren = data.flatMap(r => r.folder.value) as OdFolderObject['value']
-    const folderChildren = path === '/' ? allFolderChildren.filter(isNotPersonalVaultItem) : allFolderChildren
+    const folderChildren: OdDriveItemBase[] = data.flatMap(r => r.folder.value)
 
     return {
       folderChildren,
       files: folderChildren.filter(isSelectableFile),
       readmeFile: folderChildren.find(c => c.name.toLowerCase() === 'readme.md'),
     }
-  }, [data, path])
+  }, [data])
 
   if (error) {
     // If error includes 403 which means the user has not completed initial setup, redirect to OAuth page
@@ -129,13 +121,14 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
     )
   }
 
-  const isLoadingMore = size > 0 && typeof data[size - 1] === 'undefined'
-  const isReachingEnd = typeof data[data.length - 1]?.next === 'undefined'
-  const onlyOnePage = typeof data[0].next === 'undefined'
+  const isLoadingMore = size > 0 && data[size - 1] === undefined
+  const isReachingEnd = data[data.length - 1]?.next === undefined
+  const onlyOnePage = data[0].next === undefined
 
   if (folderView) {
     const { folderChildren, files, readmeFile } = folderView
     const totalSelected = getSelectionState(files, selected)
+    const selectedFiles = files.filter(c => selected[c.id])
 
     const toggleItemSelected = (id: string) => {
       const nextSelected = { ...selected }
@@ -154,19 +147,17 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
     const handleSelectedDownload = () => {
       const folderName = basename(path)
       const folder = folderName ? decodeURIComponent(folderName) : undefined
-      const selectedFiles = files
-        .filter(c => selected[c.id])
-        .map(c => ({
-          name: c.name,
-          url: rawFileUrl(getItemPath(path, c.name), hashedToken),
-        }))
+      const downloads = selectedFiles.map(c => ({
+        name: c.name,
+        url: rawFileUrl(getItemPath(path, c.name), hashedToken),
+      }))
 
-      if (selectedFiles.length === 1) {
-        downloadUrl(selectedFiles[0].url)
-      } else if (selectedFiles.length > 1) {
+      if (downloads.length === 1) {
+        downloadUrl(downloads[0].url)
+      } else if (downloads.length > 1) {
         const toastId = toast.loading(<DownloadingToast router={router} />)
         setTotalGenerating(true)
-        downloadMultipleFiles({ toastId, router, files: selectedFiles, folder })
+        downloadMultipleFiles({ toastId, router, files: downloads, folder })
           .then(() => {
             toast.success(t('Finished downloading selected files.'), {
               id: toastId,
@@ -179,16 +170,12 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
       }
     }
 
-    const handleSelectedPermalink = (baseUrl: string) => {
-      return files
-        .filter(c => selected[c.id])
-        .map(c => rawFileUrl(getItemPath(path, c.name), hashedToken, baseUrl))
-        .join('\n')
-    }
+    const handleSelectedPermalink = (baseUrl: string) =>
+      selectedFiles.map(c => rawFileUrl(getItemPath(path, c.name), hashedToken, baseUrl)).join('\n')
 
     const handleFolderDownload = (path: string, id: string, name?: string) => () => {
       const files = (async function* () {
-        for await (const { meta: c, path: p, isFolder, error } of traverseFolder(path)) {
+        for await (const { name: childName, path: p, isFolder, error } of traverseFolder(path)) {
           if (error) {
             toast.error(
               t('Failed to download folder {{path}}: {{status}} {{message}} Skipped it to continue.', {
@@ -199,13 +186,7 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
             )
             continue
           }
-          const hashedTokenForPath = getStoredToken(p)
-          yield {
-            name: c?.name,
-            url: rawFileUrl(p, hashedTokenForPath),
-            path: p,
-            isFolder,
-          }
+          yield { name: childName, url: rawFileUrl(p, getStoredToken(p)), path: p, isFolder }
         }
       })()
 
@@ -230,6 +211,7 @@ const FileListing: FC<{ query?: QueryMap }> = ({ query }) => {
 
     const folderProps = {
       path,
+      hashedToken,
       folderChildren,
       selected,
       toggleItemSelected,

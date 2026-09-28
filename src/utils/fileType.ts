@@ -1,11 +1,8 @@
 /**
  * The single extension -> category table for the whole app. Both the icon resolver
- * (`getFileIcon`, from getFileIcon.ts) and the preview resolver (`getPreviewType`) consume
+ * (`getFileIcon`, from getFileIcon.ts) and the preview renderers consume
  * this one source of truth so an extension can never be labelled one way for icons and another
  * for previews.
- *
- * Categories are the preview kind (see `getPreviewType.ts`); icon lookups derive their icon from
- * the same category plus a couple of extra file kinds (archives, books) that have no preview.
  */
 export type FileCategory =
   | 'image'
@@ -22,7 +19,7 @@ export type FileCategory =
   | 'book'
 
 /** extensions -> category, lowercase, no leading dot. Unknown extensions fall back to a generic file. */
-export const extensionCategory: Record<string, FileCategory> = {
+const extensionCategory: Record<string, FileCategory> = {
   // images
   gif: 'image',
   jpeg: 'image',
@@ -111,6 +108,21 @@ export const extensionCategory: Record<string, FileCategory> = {
   zip: 'archive',
 }
 
-export function getFileCategory(extension: string): FileCategory | undefined {
-  return extensionCategory[extension]
+export function getRawExtension(fileName: string): string {
+  const dot = fileName.lastIndexOf('.')
+  return dot > 0 ? fileName.slice(dot + 1) : ''
+}
+
+export function getExtension(fileName: string): string {
+  return getRawExtension(fileName).toLowerCase()
+}
+
+/** Drop the trailing `.ext` from a file name or path. */
+export function stripExtension(fileName: string): string {
+  return fileName.slice(0, fileName.lastIndexOf('.'))
+}
+
+export function getFileCategory(fileName: string, flags?: { video?: boolean }): FileCategory | undefined {
+  const extension = getExtension(fileName)
+  return extension === 'ts' && flags?.video ? 'video' : extensionCategory[extension]
 }

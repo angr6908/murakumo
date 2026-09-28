@@ -8,16 +8,16 @@ import { Spinner } from '../../components/Loading'
 import OAuthCard, { Callout } from '../../components/OAuthCard'
 import PageLayout from '../../components/PageLayout'
 import { useI18n } from '../../i18n'
-import { getLocaleProps, requestLocale } from '../../i18n/server'
+import { requestLocale } from '../../i18n/server'
 import { getOAuthPublicConfig, type OAuthPublicConfig } from '../../utils/apiConfig'
+import { getPublicRuntimeConfig } from '../../utils/publicRuntimeConfig'
 import { extractAuthCodeFromRedirected, generateAuthorisationUrl } from '../../utils/oAuthHandler'
-import { getServerSidePublicConfigProps, type PublicConfigProps } from '../../utils/serverConfig'
+import { getPageProps, type PageProps } from '../../utils/serverConfig'
 
 export default function OAuthStep2({
-  publicConfig,
   brandIcons,
   oauthConfig,
-}: PublicConfigProps & { oauthConfig: OAuthPublicConfig }) {
+}: PageProps & { oauthConfig: OAuthPublicConfig }) {
   const router = useRouter()
   const { t, rich } = useI18n()
 
@@ -29,7 +29,7 @@ export default function OAuthStep2({
 
   return (
     <PageLayout
-      title={t('OAuth Step {{step}} - {{title}}', { step: 2, title: publicConfig.title })}
+      title={t('OAuth Step {{step}} - {{title}}', { step: 2, title: getPublicRuntimeConfig().title })}
       brandIcons={brandIcons}
     >
       <OAuthCard icon={KeyRound} step={2} stepTitle={t('Get authorisation code')}>
@@ -129,9 +129,5 @@ export default function OAuthStep2({
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ req }) => ({
-  props: {
-    ...getServerSidePublicConfigProps().props,
-    ...(await getLocaleProps(requestLocale(req))),
-    oauthConfig: getOAuthPublicConfig(),
-  },
+  props: { ...(await getPageProps(requestLocale(req))), oauthConfig: getOAuthPublicConfig() },
 })

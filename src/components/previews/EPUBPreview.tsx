@@ -67,7 +67,6 @@ const EPUBPreview: FC<{ file: OdFileObject }> = ({ file }) => {
   }, [])
 
   const [location, setLocation] = useState<string | number | null>(null)
-  const onLocationChange = (cfiStr: string) => setLocation(cfiStr)
 
   // Fix for not valid epub files according to
   // https://github.com/gerhardsletten/react-reader/issues/33#issuecomment-673964947
@@ -75,10 +74,9 @@ const EPUBPreview: FC<{ file: OdFileObject }> = ({ file }) => {
     rendition.themes.override('color', getComputedStyle(epubContainer.current ?? document.body).color)
     const spineGet = rendition.book.spine.get.bind(rendition.book.spine)
     rendition.book.spine.get = (target: string) => {
-      const targetStr = target as string
       let t = spineGet(target)
-      while (t == null && targetStr.startsWith('../')) {
-        target = targetStr.substring(3)
+      while (t == null && target.startsWith('../')) {
+        target = target.substring(3)
         t = spineGet(target)
       }
       return t
@@ -105,7 +103,7 @@ const EPUBPreview: FC<{ file: OdFileObject }> = ({ file }) => {
               readerStyles={readerStyles}
               loadingView={<Loading loadingText={t('Loading EPUB ...')} />}
               location={location}
-              locationChanged={onLocationChange}
+              locationChanged={setLocation}
               epubInitOptions={{ openAs: 'epub' }}
               epubOptions={{ flow: 'scrolled', allowPopups: true }}
             />
