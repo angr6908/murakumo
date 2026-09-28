@@ -661,6 +661,7 @@
 *:focus,
 *:focus-visible {
   outline: none !important;
+  outline-color: transparent !important;
 }
 
 .video-skin .media-time-slider-chapter-title {
